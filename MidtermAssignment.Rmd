@@ -13,6 +13,12 @@ editor_options:
     wrap: 72
 ---
 
+## Introduction
+
+In response to the growing demand by Zillow for a housing market model that incorporates local context, we have been tasked with leverage data from multiple sources, including Philadelphia Open Data, U.S Census Bureau, and the American Community Survey, to gather comprehensive information that enables us to develop an accurate and reliable model for the Philadelphia housing market. 
+
+This report outlines our approach and methods and the importance of understand the local context that is integrated with pre-existing data. We aim to provide greater context and a precise understanding of Philadelphia's housing scene for present and future use. 
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
@@ -21,6 +27,7 @@ library(spdep)
 library(caret)
 library(ckanr)
 library(FNN)
+library(leaflet)
 library(grid)
 library(gridExtra)
 library(ggcorrplot) # plot correlation plot
@@ -35,7 +42,7 @@ library(tidycensus)
 source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
 ```
 
-## 
+
 
 ```{r load_key, warning = FALSE, eval = FALSE}
 census_api_key("2ad9e737f3d9062836cb46bb568be5467f86d3db", overwrite = TRUE)
@@ -177,6 +184,15 @@ HDBind <- rbind(NotRDAs, HDJoinRDAs)
 
 HDFinal <- st_intersection(house_data, acsTractsPHL.2021 %>%
                              dplyr::select(-HSDropoutMale, -HSDropoutFemale, -NAME, -total16to19))
+
+
+HDmap <- leaflet() %>%
+  addProviderTiles(providers$Esri.WorldImagery, group = "World Imagery") %>%
+  addProviderTiles(providers$STamen.TonerLite, group = "Toner Lite") %>%
+  addLayersControl(baseGroups = c ("Toner Lite", "World Imagery")) %>%     
+  addMarkers(-75.16, 39.95, popup = house_data$geometry, label = "House Data") %>%
+  setView(lat = 39.95, lng = -75.16, zoom = 11)
+HDmap
 
 #Start with descriptions of data and methods 
  
