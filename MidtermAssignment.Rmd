@@ -130,7 +130,7 @@ restaurants <- restaurants %>%
 
 ```{r read_github_data}
 house_data <- st_read("https://raw.githubusercontent.com/mafichman/musa_5080_2023/main/Midterm/data/2023/studentData.geojson") %>%
-  dplyr::select("objectid","central_air","exterior_condition", "fireplaces", "garage_spaces", "interior_condition", "mailing_street", "location", "number_of_bathrooms", "number_of_bedrooms", "number_stories", "sale_price","sale_date","total_area","total_livable_area","year_built","toPredict") %>%
+  dplyr::select("objectid","central_air","exterior_condition", "fireplaces", "garage_spaces", "interior_condition", "mailing_street", "location", "number_of_bathrooms", "number_of_bedrooms","number_of_rooms","number_stories","sale_price","sale_date","total_area","total_livable_area","year_built","toPredict") %>%
   st_transform('EPSG:2272')
 
 #Do some feature enginering
