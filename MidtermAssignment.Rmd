@@ -1,6 +1,6 @@
 ---
 title: "Midterm_Kapuvari"
-author: "Richard Barad and Trevor Kapuvari"
+author: "Trevor Kapuvari"
 date: "2023-09-25"
 output: 
   html_document:
@@ -38,24 +38,22 @@ library(ggstance) # to support jtools plots
 library(ggpubr)    # plotting R^2 value on ggplot point scatter
 library(broom.mixed) # needed for effects plots
 library(tidycensus)
-library(stargazer)
 
 source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
 ```
 
 
-# Get Data
-
-## Census Data
-
-We download the following data from the census: ADD LIST
 
 ```{r load_key, warning = FALSE, eval = FALSE}
 census_api_key("2ad9e737f3d9062836cb46bb568be5467f86d3db", overwrite = TRUE)
+
+acs_variable_list.2021 <- load_variables(2021, 'acs5')
+
+house_data <- st_read("https://raw.githubusercontent.com/mafichman/musa_5080_2023/main/Midterm/data/2023/studentData.geojson")%>%
+  filter(sale_price != 0)
 ```
 
 ```{r acs_vars, include=FALSE}
-
 acs_vars <- c("B01001_001E", # ACS total Pop estimate
               "B25001_001E", # Estimate of total housing units
               "B25002_003E", # Number of vacant housing units
@@ -104,9 +102,17 @@ acsTractsPHL.2021 <- acsTractsPHL.2021 %>%
          AssistedIncRate = HHAssistedInc/totalHU)
 ```
 
-## Get Data from open data Philly
 
-Download data on Planning Districts, redevelopment areas, and number of restaurants per census block. Houses are classified as either being located inside or outside the redevelopment area. 
+```{r read_github_data}
+house_data <- st_read("https://raw.githubusercontent.com/mafichman/musa_5080_2023/main/Midterm/data/2023/studentData.geojson") %>%
+  filter(sale_price != 0) %>%
+  dplyr::select("objectid", "sale_date", "basements", "census_tract", "central_air", "exterior_condition", "fireplaces", "garage_spaces", "interior_condition", "mailing_street", "location", "number_of_bathrooms", "number_of_bedrooms", "number_stories", "sale_price") %>%
+  st_transform('EPSG:2272')
+
+
+#savedTidyData <- write.csv("aceTractsPHL.2021")
+```
+
 
 ```{r get open_phily_data}
 planning_districts <- st_read("https://opendata.arcgis.com/datasets/0960ea0f38f44146bb562f2b212075aa_0.geojson")%>%
@@ -121,60 +127,10 @@ restaurants <- st_read('https://opendata.arcgis.com/datasets/53b8a1c653a74c92b2d
   dplyr::select(GEOID10,TOTAL_RESTAURANTS)
 
 restaurants <- restaurants %>%
-  mutate(rest_per_sqmi = as.numeric(TOTAL_RESTAURANTS / (st_area(restaurants)/358700000)))
+  mutate(area_sqmi = st_area(restaurants)/358700000, #Calculate number of trees per square mile
+         rest_per_mi = TOTAL_RESTAURANTS / area_sqmi)
 
 ```
-
-
-## Load House Sales Data from Github
-
-```{r read_github_data}
-house_data <- st_read("https://raw.githubusercontent.com/mafichman/musa_5080_2023/main/Midterm/data/2023/studentData.geojson") %>%
-  dplyr::select("objectid","central_air","exterior_condition", "fireplaces", "garage_spaces", "interior_condition", "mailing_street", "location", "number_of_bathrooms", "number_of_bedrooms","number_of_rooms","number_stories","sale_price","sale_date","total_area","total_livable_area","year_built","toPredict") %>%
-  st_transform('EPSG:2272')
-
-#Do some feature enginering
-house_data <- house_data %>%
-  mutate(
-    #Recode exterior condition so that four is best condition, group some categories together
-    exterior_condition = as.numeric(recode(exterior_condition, '7'='1', '6'='2', '5'='3', '4'='3', '3'='4', '2'='4', '1'='4')), 
-    #Set blank values to 0, assumed that if value is blank there are no fireplaces based on metadata.
-    fireplaces = ifelse(is.na(fireplaces),0,fireplaces))
-  
-
-```
-
-## Load School Test Score Data
-
-We look at the percent of students at public schools who had proficient or advanced scores on the PSSA/Keystone test. The PSSA/Keystone includes Science, Math, and English Language Arts score. For each school, we averaged together the students performance on the three sections to get a single number for each school. We then determined the nearest school to each home and assigned the home the test score value of that school.
-
-```{r school_data, cache=FALSE, include=FALSE}
-school_test_data <- read.csv('Data\\Schools\\2022 PSSA Keystone Actual (School_S).csv')
-schools <- read.csv('Data\\Schools\\2022-2023 Master School List (20230110).csv')
-
-schools <- schools %>%
-  rename(ulcs_code = ULCS.Code) %>% 
-  separate(col=GPS.Location, into=c('Lat', 'Long'), sep=', ') %>% 
-  st_as_sf(coords = c("Long", "Lat"), crs = "EPSG:4326") %>% 
-  select(ulcs_code, School.Name..ULCS., School.Level, Admission.Type)
-
-school_test_data <- school_test_data %>%
-  dplyr::filter(category == 'All' & grade == 'Grades 3-8' & profadv_score != 's')  %>%
-  mutate(profadv_score = as.double(profadv_score))
-
-school_test_data_summ <- school_test_data %>% 
-  group_by(ulcs_code, publicationname) %>% summarize(mean_profadv = mean(profadv_score))
-
-schools <- schools %>%
-  left_join(school_test_data_summ, by='ulcs_code') %>%
-  drop_na() %>%
-  st_transform('EPSG:2272')
-
-```
-
-## Get Data on number of Trees from Open Data Philly
-
-We download data on trees as points and calculate the number of trees per square mile in each census tract.
 
 ``` {r get_process_tree_data}
 #Get Data on trees in Philadelphia
@@ -187,78 +143,12 @@ acsTractsPHL.2021 <- st_intersection(acsTractsPHL.2021, trees) %>% #Determine wh
   group_by(GEOID) %>% summarize(tree_count = n()) %>% #Count the number of trees in each Census tract
   right_join(acsTractsPHL.2021, by='GEOID') %>% #Join tree cont to census tract Dataframe
   st_sf() %>%
-  mutate(trees_per_mi = as.double(tree_count / (st_area(acsTractsPHL.2021)/358700000)))
+  mutate(area_sqmi = st_area(acsTractsPHL.2021)/358700000, #Calculate number of trees per square mile
+         trees_per_mi = tree_count / area_sqmi)
 
- #        ggplot()+
-#  geom_sf(data=acsTractsPHL.2021, aes(fill=q5(trees_per_mi)))+
-# geom_sf(data=planning_districts,fill='transparent',color='red',linewidth=1)
-```
-
-## Urban Corridors
-
-We calculate the distance to the nearest urban corridor.
-
-```{r corridors data}
-corridors_url <- "https://opendata.arcgis.com/datasets/f43e5f92d34e41249e7a11f269792d11_0.geojson"
-corridors <- st_read(corridors_url, quiet= TRUE) %>% st_transform('EPSG:2272')
-
-nearest_fts <- st_nearest_feature(house_data,corridors)
-
-house_data$dist_urb_corridor <- as.double(st_distance(house_data, corridors[nearest_fts,], by_element=TRUE))
-
-```
-
-## Shootings
-
-We calculate the number of shootings within a 1/2 mile and 1/4 mile radius of each home.
-
-```{r homicides data}
-shootings_url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings&filename=shootings&format=geojson&skipfields=cartodb_id"
-shootings <- st_read(shootings_url) %>% st_transform('EPSG:2272') %>%
-  mutate(date_=as.Date(date_, format = "%d-%m-%Y"))  %>%
-  dplyr::filter(date_ > '2023-01-01') %>%
-  dplyr::select(location)
-
-house_data <- st_intersection(shootings,st_buffer(house_data,2640)) %>%
-  st_drop_geometry() %>%
-  count(objectid) %>%
-  rename(shooting_halfmile = n) %>%
-  right_join(house_data, by='objectid') %>%
-  mutate(shooting_halfmile = ifelse(is.na(shooting_halfmile),0,shooting_halfmile)) %>%
-  st_sf()
-
-house_data <- st_intersection(shootings,st_buffer(house_data,2640/2)) %>%
-  st_drop_geometry() %>%
-  count(objectid) %>%
-  rename(shooting_quartermile = n) %>%
-  right_join(house_data, by='objectid') %>%
-  mutate(shooting_quartermile = ifelse(is.na(shooting_quartermile),0,shooting_quartermile)) %>%
-  st_sf()
-```
-
-# Join All Data to House Sales Data
-
-```{r Joining All Tables}
-HDJoin <- st_intersection(house_data, restaurants %>%
-                               dplyr::select("TOTAL_RESTAURANTS", "rest_per_sqmi"))
-HDJoin <- st_intersection(HDJoin, planning_districts %>%
-                             dplyr::select("DIST_NAME"))
-
-HDJoin <- st_join(HDJoin,schools %>% dplyr::select('mean_profadv'), join=st_nearest_feature)
-
-HDJoinRDAs <- HDJoin[st_intersects(HDJoin, redevelopment_areas) %>% lengths > 0, ] %>% 
-  mutate(DevelopmentArea = 1)
-  
-NotRDAs <- HDJoin[!st_intersects(HDJoin, redevelopment_areas) %>% lengths > 0, ] %>% 
-  mutate(DevelopmentArea = 0)
-
-HDBind <- rbind(NotRDAs, HDJoinRDAs)
-
-HDFinal <- st_intersection(house_data, acsTractsPHL.2021 %>%
-                             dplyr::select(-HSDropoutMale, -HSDropoutFemale, -NAME, -total16to19)) %>%
-                             dplyr::filter(toPredict == "MODELLING")
-                           
-
+ggplot()+
+  geom_sf(data=acsTractsPHL.2021, aes(fill=q5(trees_per_mi)))+
+  geom_sf(data=planning_districts,fill='transparent',color='red',linewidth=1)
 ```
 
 
@@ -279,23 +169,23 @@ D <- ggplot()+
   geom_sf(data=restaurants,aes(fill = q5(TOTAL_RESTAURANTS)))
 ```
 
-```{r Summary Statistics}
-HDFinal_nongeom <- HDFinal %>% st_drop_geometry()
-HDFinal_nongeom <- HDFinal_nongeom %>%
-  dplyr::select_if(is.numeric) %>%
-  dplyr::select(-objectid, -totalPop, -year_built, -totalHU, -number_of_rooms, -TotalOccH)
+```{r Joining All Tables}
+HDJoin <- st_intersection(house_data, restaurants %>%
+                               dplyr::select("TOTAL_RESTAURANTS", "rest_per_mi"))
+HDJoin <- st_intersection(HDJoin, planning_districts %>%
+                             dplyr::select("DIST_NAME"))
+HDJoinRDAs <- HDJoin[st_intersects(HDJoin, redevelopment_areas) %>% lengths > 0, ] %>% 
+  mutate(DevelopmentArea = 1)
+  
+NotRDAs <- HDJoin[!st_intersects(HDJoin, redevelopment_areas) %>% lengths > 0, ] %>% 
+  mutate(DevelopmentArea = 0)
 
-stargazer(HDFinal_nongeom, type = 'text', title= "Table 1: Summary Statistics")
-```
-```{r correlation_matrix, fig.height=5, fig.width=13.5}
-HDFinal_nongeom %>% 
-  correlate() %>% 
-  autoplot() +
-  geom_text(aes(label = round(r,digits=2)), size = 1.5, order = "hclust", type = "upper", tl.cex = 0.7)
+HDBind <- rbind(NotRDAs, HDJoinRDAs)
 
-```
+HDFinal <- st_intersection(house_data, acsTractsPHL.2021 %>%
+                             dplyr::select(-HSDropoutMale, -HSDropoutFemale, -NAME, -total16to19))
 
-```{r leaftlet_map(later)}
+
 HDmap <- leaflet() %>%
   addProviderTiles(providers$Esri.WorldImagery, group = "World Imagery") %>%
   addProviderTiles(providers$STamen.TonerLite, group = "Toner Lite") %>%
@@ -308,15 +198,3 @@ HDmap
  
 ```
 
-```{r dependent variable correlation, fig.height=10}
-## Variables: total_livable_area, tree_count, WhiteHomeowner, AssistedIncRate
-HDFinal_nongeom %>%
-  dplyr::select(sale_price, total_livable_area, tree_count, WhiteHomeowner, AssistedIncRate) %>%
-  filter(sale_price <= 1000000) %>%
-  gather(Variable, Value, -sale_price) %>% 
-   ggplot(aes(Value, sale_price)) +
-     geom_point(size = .5) + geom_smooth(method = "lm", se=F, colour = "#FA7800") +
-     facet_wrap(~Variable, nrow = 1, scales = "free") +
-     labs(title = "Price as a function of continuous variables") +
-     plotTheme()
-```
