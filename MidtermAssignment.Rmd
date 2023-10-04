@@ -13,12 +13,6 @@ editor_options:
     wrap: 72
 ---
 
-## Introduction
-
-In response to the growing demand by Zillow for a housing market model that incorporates local context, we have been tasked with leverage data from multiple sources, including Philadelphia Open Data, U.S Census Bureau, and the American Community Survey, to gather comprehensive information that enables us to develop an accurate and reliable model for the Philadelphia housing market. 
-
-This report outlines our approach and methods and the importance of understand the local context that is integrated with pre-existing data. We aim to provide greater context and a precise understanding of Philadelphia's housing scene for present and future use. 
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
@@ -27,7 +21,6 @@ library(spdep)
 library(caret)
 library(ckanr)
 library(FNN)
-library(leaflet)
 library(grid)
 library(gridExtra)
 library(ggcorrplot) # plot correlation plot
@@ -38,11 +31,9 @@ library(ggstance) # to support jtools plots
 library(ggpubr)    # plotting R^2 value on ggplot point scatter
 library(broom.mixed) # needed for effects plots
 library(tidycensus)
-
-source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
 ```
 
-
+## 
 
 ```{r load_key, warning = FALSE, eval = FALSE}
 census_api_key("2ad9e737f3d9062836cb46bb568be5467f86d3db", overwrite = TRUE)
@@ -74,8 +65,7 @@ acsTractsPHL.2021 <- get_acs(geography = "tract",
                              geometry = TRUE, 
                              state = "PA", 
                              county = "Philadelphia", 
-                             output = "wide") %>%
-  st_transform('EPSG:2272')
+                             output = "wide") 
 ```
 
 ```{r do_some_dplyr, cache=FALSE, include=FALSE}
@@ -102,99 +92,24 @@ acsTractsPHL.2021 <- acsTractsPHL.2021 %>%
          AssistedIncRate = HHAssistedInc/totalHU)
 ```
 
-
-```{r read_github_data}
-house_data <- st_read("https://raw.githubusercontent.com/mafichman/musa_5080_2023/main/Midterm/data/2023/studentData.geojson") %>%
-  filter(sale_price != 0) %>%
-  dplyr::select("objectid", "sale_date", "basements", "census_tract", "central_air", "exterior_condition", "fireplaces", "garage_spaces", "interior_condition", "mailing_street", "location", "number_of_bathrooms", "number_of_bedrooms", "number_stories", "sale_price") %>%
-  st_transform('EPSG:2272')
-
-
-#savedTidyData <- write.csv("aceTractsPHL.2021")
-```
-
-
-```{r get open_phily_data}
-planning_districts <- st_read("https://opendata.arcgis.com/datasets/0960ea0f38f44146bb562f2b212075aa_0.geojson")%>%
-  st_transform('EPSG:2272')
-
+```{r tracts and districts}
+planning_districts <- st_read("https://opendata.arcgis.com/datasets/0960ea0f38f44146bb562f2b212075aa_0.geojson")
+sanitation_areas <- st_read("https://opendata.arcgis.com/datasets/472c504f650242f4be612d8320b89c86_0.geojson")
 redevelopment_areas <- st_read("https://data-phl.opendata.arcgis.com/datasets/80f2c71305f5493c8e0aab9137354844_0.geojson") %>%
-  dplyr::filter(TYPE == 'Redevelopment Area Plan and Blight Certification' & STATUS == 'Active') %>%
-  st_transform('EPSG:2272')
-
-restaurants <- st_read('https://opendata.arcgis.com/datasets/53b8a1c653a74c92b2de23a5d7bf04a0_0.geojson')%>%
-  st_transform('EPSG:2272') %>%
-  dplyr::select(GEOID10,TOTAL_RESTAURANTS)
-
-restaurants <- restaurants %>%
-  mutate(area_sqmi = st_area(restaurants)/358700000, #Calculate number of trees per square mile
-         rest_per_mi = TOTAL_RESTAURANTS / area_sqmi)
-
-```
-
-``` {r get_process_tree_data}
-#Get Data on trees in Philadelphia
-trees <- st_read('https://opendata.arcgis.com/api/v3/datasets/5abe042f2927486891c049cf064338cb_0/downloads/data?format=geojson&spatialRefId=4326&where=1%3D1')%>%
-  st_transform('EPSG:2272')
-
-#Calculate the number of trees per census tract and convert to trees per square mile to normalize
-acsTractsPHL.2021 <- st_intersection(acsTractsPHL.2021, trees) %>% #Determine what census tract each tree is in using intersection
-  st_drop_geometry() %>%
-  group_by(GEOID) %>% summarize(tree_count = n()) %>% #Count the number of trees in each Census tract
-  right_join(acsTractsPHL.2021, by='GEOID') %>% #Join tree cont to census tract Dataframe
-  st_sf() %>%
-  mutate(area_sqmi = st_area(acsTractsPHL.2021)/358700000, #Calculate number of trees per square mile
-         trees_per_mi = tree_count / area_sqmi)
+  dplyr::filter(TYPE == 'Redevelopment Area Plan and Blight Certification' & STATUS == 'Active' & NAME != "POINT BREEZE AND GRAYS FERRY")
 
 ggplot()+
-  geom_sf(data=acsTractsPHL.2021, aes(fill=q5(trees_per_mi)))+
-  geom_sf(data=planning_districts,fill='transparent',color='red',linewidth=1)
-```
-
-
-``` {r make_maps}
- A<- ggplot()+
-  geom_sf(data=house_data,aes(colour = q5(sale_price)))+
+  geom_sf(data=house_data,aes(colour = q5(sale_price)),size=0.5)+
   geom_sf(data=planning_districts,fill='transparent',color='black')
 
-B <-ggplot()+
+ggplot()+
+  geom_sf(data=house_data,aes(colour = q5(sale_price)),size=0.5)+
+  geom_sf(data=sanitation_areas,fill='transparent',color='black')
+
+ggplot()+
   geom_sf(data=house_data,aes(colour = q5(sale_price)),size=0.5)+
   geom_sf(data=planning_districts,fill='transparent',color='red',linewidth=1)+
   geom_sf(data=redevelopment_areas,fill='transparent',color='black')
 
-C <- ggplot()+
-  geom_sf(data=restaurants,aes(fill = q5(rest_per_mi)))
 
-D <- ggplot()+
-  geom_sf(data=restaurants,aes(fill = q5(TOTAL_RESTAURANTS)))
 ```
-
-```{r Joining All Tables}
-HDJoin <- st_intersection(house_data, restaurants %>%
-                               dplyr::select("TOTAL_RESTAURANTS", "rest_per_mi"))
-HDJoin <- st_intersection(HDJoin, planning_districts %>%
-                             dplyr::select("DIST_NAME"))
-HDJoinRDAs <- HDJoin[st_intersects(HDJoin, redevelopment_areas) %>% lengths > 0, ] %>% 
-  mutate(DevelopmentArea = 1)
-  
-NotRDAs <- HDJoin[!st_intersects(HDJoin, redevelopment_areas) %>% lengths > 0, ] %>% 
-  mutate(DevelopmentArea = 0)
-
-HDBind <- rbind(NotRDAs, HDJoinRDAs)
-
-HDFinal <- st_intersection(house_data, acsTractsPHL.2021 %>%
-                             dplyr::select(-HSDropoutMale, -HSDropoutFemale, -NAME, -total16to19))
-
-
-HDmap <- leaflet() %>%
-  addProviderTiles(providers$Esri.WorldImagery, group = "World Imagery") %>%
-  addProviderTiles(providers$STamen.TonerLite, group = "Toner Lite") %>%
-  addLayersControl(baseGroups = c ("Toner Lite", "World Imagery")) %>%     
-  addMarkers(-75.16, 39.95, popup = house_data$geometry, label = "House Data") %>%
-  setView(lat = 39.95, lng = -75.16, zoom = 11)
-HDmap
-
-#Start with descriptions of data and methods 
- 
-```
-
