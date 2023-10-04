@@ -38,6 +38,7 @@ library(ggstance) # to support jtools plots
 library(ggpubr)    # plotting R^2 value on ggplot point scatter
 library(broom.mixed) # needed for effects plots
 library(tidycensus)
+library(stargazer)
 
 source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
 ```
@@ -120,8 +121,7 @@ restaurants <- st_read('https://opendata.arcgis.com/datasets/53b8a1c653a74c92b2d
   dplyr::select(GEOID10,TOTAL_RESTAURANTS)
 
 restaurants <- restaurants %>%
-  mutate(area_sqmi = st_area(restaurants)/358700000, #Calculate number of trees per square mile
-         rest_per_mi = TOTAL_RESTAURANTS / area_sqmi)
+  mutate(rest_per_sqmi = as.numeric(TOTAL_RESTAURANTS / (st_area(restaurants)/358700000)))
 
 ```
 
@@ -187,12 +187,11 @@ acsTractsPHL.2021 <- st_intersection(acsTractsPHL.2021, trees) %>% #Determine wh
   group_by(GEOID) %>% summarize(tree_count = n()) %>% #Count the number of trees in each Census tract
   right_join(acsTractsPHL.2021, by='GEOID') %>% #Join tree cont to census tract Dataframe
   st_sf() %>%
-  mutate(area_sqmi = st_area(acsTractsPHL.2021)/358700000, #Calculate number of trees per square mile
-         trees_per_mi = tree_count / area_sqmi)
+  mutate(trees_per_mi = as.double(tree_count / (st_area(acsTractsPHL.2021)/358700000)))
 
-ggplot()+
-  geom_sf(data=acsTractsPHL.2021, aes(fill=q5(trees_per_mi)))+
-  geom_sf(data=planning_districts,fill='transparent',color='red',linewidth=1)
+ #        ggplot()+
+#  geom_sf(data=acsTractsPHL.2021, aes(fill=q5(trees_per_mi)))+
+# geom_sf(data=planning_districts,fill='transparent',color='red',linewidth=1)
 ```
 
 ## Urban Corridors
@@ -205,7 +204,7 @@ corridors <- st_read(corridors_url, quiet= TRUE) %>% st_transform('EPSG:2272')
 
 nearest_fts <- st_nearest_feature(house_data,corridors)
 
-house_data$dist_urb_corridor <- st_distance(house_data, corridors[nearest_fts,], by_element=TRUE)
+house_data$dist_urb_corridor <- as.double(st_distance(house_data, corridors[nearest_fts,], by_element=TRUE))
 
 ```
 
@@ -241,7 +240,7 @@ house_data <- st_intersection(shootings,st_buffer(house_data,2640/2)) %>%
 
 ```{r Joining All Tables}
 HDJoin <- st_intersection(house_data, restaurants %>%
-                               dplyr::select("TOTAL_RESTAURANTS", "rest_per_mi"))
+                               dplyr::select("TOTAL_RESTAURANTS", "rest_per_sqmi"))
 HDJoin <- st_intersection(HDJoin, planning_districts %>%
                              dplyr::select("DIST_NAME"))
 
@@ -255,8 +254,10 @@ NotRDAs <- HDJoin[!st_intersects(HDJoin, redevelopment_areas) %>% lengths > 0, ]
 
 HDBind <- rbind(NotRDAs, HDJoinRDAs)
 
-#HDFinal <- st_intersection(house_data, acsTractsPHL.2021 %>%
-                             #dplyr::select(-HSDropoutMale, -HSDropoutFemale, -NAME, -total16to19))
+HDFinal <- st_intersection(house_data, acsTractsPHL.2021 %>%
+                             dplyr::select(-HSDropoutMale, -HSDropoutFemale, -NAME, -total16to19)) %>%
+                             dplyr::filter(toPredict == "MODELLING")
+                           
 
 ```
 
@@ -278,10 +279,23 @@ D <- ggplot()+
   geom_sf(data=restaurants,aes(fill = q5(TOTAL_RESTAURANTS)))
 ```
 
+```{r Summary Statistics}
+HDFinal_nongeom <- HDFinal %>% st_drop_geometry()
+HDFinal_nongeom <- HDFinal_nongeom %>%
+  dplyr::select_if(is.numeric) %>%
+  dplyr::select(-objectid, -totalPop, -year_built, -totalHU, -number_of_rooms, -TotalOccH)
 
+stargazer(HDFinal_nongeom, type = 'text', title= "Table 1: Summary Statistics")
+```
+```{r correlation_matrix, fig.height=5, fig.width=13.5}
+HDFinal_nongeom %>% 
+  correlate() %>% 
+  autoplot() +
+  geom_text(aes(label = round(r,digits=2)), size = 1.5, order = "hclust", type = "upper", tl.cex = 0.7)
 
+```
 
-```{r leaftlet_map}
+```{r leaftlet_map(later)}
 HDmap <- leaflet() %>%
   addProviderTiles(providers$Esri.WorldImagery, group = "World Imagery") %>%
   addProviderTiles(providers$STamen.TonerLite, group = "Toner Lite") %>%
@@ -294,3 +308,15 @@ HDmap
  
 ```
 
+```{r dependent variable correlation, fig.height=10}
+## Variables: total_livable_area, tree_count, WhiteHomeowner, AssistedIncRate
+HDFinal_nongeom %>%
+  dplyr::select(sale_price, total_livable_area, tree_count, WhiteHomeowner, AssistedIncRate) %>%
+  filter(sale_price <= 1000000) %>%
+  gather(Variable, Value, -sale_price) %>% 
+   ggplot(aes(Value, sale_price)) +
+     geom_point(size = .5) + geom_smooth(method = "lm", se=F, colour = "#FA7800") +
+     facet_wrap(~Variable, nrow = 1, scales = "free") +
+     labs(title = "Price as a function of continuous variables") +
+     plotTheme()
+```
