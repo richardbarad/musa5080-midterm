@@ -62,9 +62,6 @@ acs_vars <- c("B01001_001E", # ACS total Pop estimate
               "B25001_001E", # Estimate of total housing units
               "B25002_003E", # Number of vacant housing units
               "B19013_001E", # Median HH Income ($)
-              "B14005_001E", # Total Civilians Ages 16-19
-              "B14005_012E", # High School Dropouts (Male)
-              "B14005_026E", # High School Dropouts (Female)
               "B19058_002E", # Households with Public Assistance Income
               "B25003_002E", # Owner Occupied Housing Units
               "B25006_002E", # Homeowner is White
@@ -91,19 +88,17 @@ acsTractsPHL.2021 <- acsTractsPHL.2021 %>%
           totalHU = B25001_001E,
           totalVacant = B25002_003E,
           medHHInc = B19013_001E,
-          total16to19 = B14005_001E,
-          HSDropoutMale = B14005_012E,
-          HSDropoutFemale = B14005_026E,
           HHAssistedInc = B19058_002E,
           OwnerOccH = B25003_002E,
           WhiteHomeowner = B25006_002E,
-          TotalOccH = B25006_001E)
+          TotalOccH = B25006_001E) %>%
+  dplyr::filter(totalPop != 0)
 
 acsTractsPHL.2021 <- acsTractsPHL.2021 %>%
-  mutate(DropoutRate = (HSDropoutMale + HSDropoutFemale)/total16to19,
-         HHOccupiedRate = OwnerOccH/totalHU,
-         WhiteHOrate = WhiteHomeowner/TotalOccH,
-         AssistedIncRate = HHAssistedInc/totalHU)
+  mutate(HHOccupiedRate = ifelse(OwnerOccH==0,0,OwnerOccH/totalHU),
+         WhiteHOrate = ifelse(WhiteHomeowner==0,0,WhiteHomeowner/TotalOccH),
+         AssistedIncRate = ifelse(HHAssistedInc==0,0,HHAssistedInc/totalHU),
+         medHHInc = ifelse(is.na(medHHInc),mean(medHHInc,na.rm=TRUE),medHHInc))
 ```
 
 ## Get Data from open data Philly
@@ -140,9 +135,15 @@ house_data <- house_data %>%
   mutate(
     #Recode exterior condition so that four is best condition, group some categories together
     exterior_condition = as.numeric(recode(exterior_condition, '7'='1', '6'='2', '5'='3', '4'='3', '3'='4', '2'='4', '1'='4')), 
+    #Assumed averager condition is value is NA
+    exterior_condition = ifelse(is.na(exterior_condition),2,exterior_condition),
     #Set blank values to 0, assumed that if value is blank there are no fireplaces based on metadata.
     fireplaces = ifelse(is.na(fireplaces),0,fireplaces),
-    number_of_bedrooms = ifelse(number_of_bedrooms == 0,1,number_of_bedrooms))
+    #Assumed there is allways at least one bathroom - if property has 0 bathrooms assigned a value of 1.
+    number_of_bathrooms = ifelse(number_of_bathrooms == 0,1,number_of_bathrooms),
+    number_of_bathrooms = ifelse(is.na(number_of_bathrooms),1,number_of_bathrooms),
+    #Assumed averager condition is value is NA
+    interior_condition = ifelse(is.na(interior_condition),4,interior_condition))
   
 
 ```
@@ -258,7 +259,7 @@ NotRDAs <- HDJoin[!st_intersects(HDJoin, redevelopment_areas) %>% lengths > 0, ]
 HDBind <- rbind(NotRDAs, HDJoinRDAs)
 
 HDFinal <- st_intersection(HDBind, acsTractsPHL.2021 %>%
-                             dplyr::select(-HSDropoutMale, -HSDropoutFemale, -NAME, -total16to19)) %>%
+                             dplyr::select(-NAME)) %>%
                              dplyr::filter(toPredict == "MODELLING")
                            
 
@@ -284,11 +285,11 @@ HDFinal_nongeom <- HDFinal_nongeom %>%
 
 stargazer(HDFinal_nongeom, type = 'text', title= "Table 1: Summary Statistics")
 ```
-```{r correlation_matrix, fig.height=5.5, fig.width=14}
+```{r correlation_matrix, fig.height=6.5, fig.width=17.5}
 HDFinal_nongeom %>% 
   correlate() %>% 
   autoplot() +
-  geom_text(aes(label = round(r,digits=2)), size = 1.5, order = "hclust", type = "upper", tl.cex = 0.7)
+  geom_text(aes(label = round(r,digits=2)), size = 2, order = "hclust", type = "upper", tl.cex = 0.7)
 
 ```
 
@@ -354,6 +355,7 @@ ggplot()+
 ```
 ```{r "Something Engaging"}
 ggplot()+
+  geom_sf(data=planning_districts,fill='grey90',color='transparent')+
   geom_sf(data=HDFinal,aes(colour = q5(sale_class)),size=0.5)+
   geom_sf(data=redevelopment_areas,fill='transparent',color='black')+
   scale_color_manual(values = palette5,
@@ -379,25 +381,24 @@ reg.training <-
                                            DevelopmentArea, tree_count, medHHInc, 
                                            exterior_condition, fireplaces, WhiteHOrate, AssistedIncRate,
                                            rest_per_sqmi, number_of_bathrooms))
-
-stargazer(reg.training, type = 'text', title= "Regression Training Results")
+summary(reg.training)
+#stargazer(reg.training, type = 'text', title= "Regression Training Results")
 
 ```
 
 ```{r Reg Training}
 Philly.test <-
   Philly.test %>%
-  mutate(Regression = "Baseline Regression",
-         sale_price.Predict = predict(reg.training, Philly.test),
+  mutate(sale_price.Predict = predict(reg.training, Philly.test),
          sale_price.Error = sale_price.Predict - sale_price,
          sale_price.AbsError = abs(sale_price.Predict - sale_price),
          sale_price.APE = (abs(sale_price.Predict - sale_price)) / sale_price.Predict)%>%
   filter(sale_price < 5000000)
 
-meanerrors <- Philly.test %>% 
-  as.data.frame %>%
-  group_by(DIST_NAME) %>%
-#  st_drop_geometry() %>%
-  summarize(MAE = mean(sale_price.AbsError),
-            MAPE = mean(sale_price.APE))
+Philly.test %>% 
+  st_drop_geometry() %>%
+  summarise(MAE = mean(sale_price.AbsError),
+            MAPE = mean(sale_price.APE)*100) %>%
+  kbl(col.name=c('Mean Absolute Error','Mean Absolute Percentage Error')) %>%
+  kable_classic()
 ```
