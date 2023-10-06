@@ -47,7 +47,12 @@ source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-L
 
 
 # Get Data
+In order to develop an enhanced understanding on the housing market, we acquired data that looks beyond the house itself, but the conditions and amenities that surround such, to explain the deeper meaning behind "location". The first source was from the U.S Census Bureau, as a beginning point in obtaining geographic features for visual display, broad context on parcels and neighborhoods, and overall socioeconomic data. 
 
+The next source of data, similar to the U.S Census, was leveraged by Social Explorer. This website takes U.S Census data and creates a more user-friendly and comprehensive database that allowed us to efficiently seek neighborhood-level information that we can use to experiment with our model. The website fostered our ideas of potential indicators of sale price beyond the housing market, rather amenities surrounding it. This exploration further cascaded to investigate less conventional attributes to a neighborhood that look at a wide range of aspects, but in a specified quantitative measurement. Crime was measured through the number of shootings in a 1/2 miles radius, courtesy of OpenDataPhilly. Beyond that, in order to adequately visualize and analyze data across the city, we gathered spatial information as well as additional indirect neighborhood characteristics from ArcGIS Online, an open data source website sponsored by Esri. 
+
+
+Other Sources: Opendata Philly(shootings), ArcGIS Online (Esri)(trees). 
 ## Census Data
 
 We download the following data from the census: ADD LIST
