@@ -301,7 +301,7 @@ stargazer(HDFinal_nongeom, type = 'text', title= "Table 1: Summary Statistics")
 
 # Correlation Matrix
 
-A correlation matrix compares factors against one another to see how related they are at determining the others value. Each box presented can indicate whether there is a correlation (directly or inverse) or little relationship between them. We are able to see strong correlation between many factors. We are interested in all variables that show a significant relationship with sale price, specifically taking those with an absolute value of 0.25 or greater. 
+A correlation matrix compares factors against one another to see how related they are at determining the others value. Each box presented can indicate whether there is a correlation (directly or inverse) or little relationship between them. We are able to see strong correlation between many factors. We are interested in all variables that show a significant relationship with sale price, specifically taking those with an absolute value of 0.3 or greater. 
 
 ```{r correlation_matrix, fig.height=6.5, fig.width=17.5}
 HDFinal_nongeom %>% 
@@ -310,12 +310,14 @@ HDFinal_nongeom %>%
   geom_text(aes(label = round(r,digits=2)), size = 2, order = "hclust", type = "upper", tl.cex = 0.7)
 
 ```
+# Dependent Varaiable Correlations 
+The four graphs below represent four key dependent variables that broadly cover each aspect of a neighborhood in order to determine house prices. Assited Income focuses on the homeowner's socioeconomic status, resulting in an inverse relationship. Tree count and total livable area are directly correlated with a house's desirability because of home size being considered a luxury and more trees often indicates better care for a neighborhood. The last dependent variable we look at is the white homeowner rate. White homeownership can indicate a "perceived" higher price value because of racial segregation, wealth inequality, and potential gentrification. 
 
 
-```{r dependent variable correlation, fig.height=6, fig.width=10}
+```{r dependent variable correlation, fig.height=6, fig.width=15}
 ## Variables: total_livable_area, tree_count, WhiteHomeowner, AssistedIncRate
 HDFinal_nongeom %>%
-  dplyr::select(sale_price, total_livable_area, tree_count, WhiteHomeowner, AssistedIncRate) %>%
+  dplyr::select(sale_price, total_livable_area, tree_count, WhiteHOrate, AssistedIncRate) %>%
   filter(sale_price <= 1000000) %>%
   gather(Variable, Value, -sale_price) %>% 
    ggplot(aes(Value, sale_price)) +
@@ -324,13 +326,18 @@ HDFinal_nongeom %>%
      labs(title = "Price as a function of continuous variables") +
      plotTheme()
 ```
+
+# Map of Home Prices in Philadelphia
+
+This map explores the variation in 2021 home prices across Philadelphia. We noticed the most expensive areas are located near Center City or far outskirts such as Chestnut Hill.   
+
 ```{r Map of Home Prices}
 HDFinal <- HDFinal %>% 
   mutate(sale_class = cut(sale_price, breaks = c(0, 250000, 500000, 750000, 1000000, max(HDFinal$sale_price, na.rm=TRUE))))
 
 ggplot()+
     geom_sf(data=planning_districts,fill='grey80',color='transparent')+
-    geom_sf(data=HDFinal, size=0.75,aes(colour = (sale_class)))+
+    geom_sf(data=HDFinal, size=0.75,aes(colour = q5(sale_class)))+
     geom_sf(data=planning_districts,fill='transparent',color='black')+
   scale_color_manual(values = palette5,
                     name = "Sales Price (USD)",
@@ -340,6 +347,7 @@ ggplot()+
     
 ```
 
+# 
 ```{r 3 Interesting Maps Part 1}
 ggplot()+
   geom_sf(data=planning_districts,fill='grey80',color='transparent')+
@@ -371,6 +379,7 @@ ggplot()+
   geom_sf(data=planning_districts,fill='transparent',color='black')+
   mapTheme()
 ```
+
 ```{r "Something Engaging"}
 ggplot()+
   geom_sf(data=planning_districts,fill='grey90',color='transparent')+
@@ -383,6 +392,7 @@ ggplot()+
   mapTheme()
 
 ```
+
 ```{r Actually something engaging}
 ggplotly(
   ggplot(restaurants)+
