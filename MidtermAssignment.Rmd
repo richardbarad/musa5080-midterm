@@ -401,7 +401,7 @@ ggplotly(
 )
 
 ```
-
+# Training and Test Sets
 ```{r Training and Test Set}
 inTrain <- createDataPartition(
               y = paste(HDFinal$DIST_NAME), 
@@ -419,12 +419,14 @@ reg.training <-
 summary(reg.training)
 #stargazer(reg.training, type = 'text', title= "Regression Training Results")
 
-```
 
+```
+# Regression Training
 ```{r Reg Training}
 Philly.test <-
   Philly.test %>%
-  mutate(sale_price.Predict = predict(reg.training, Philly.test),
+  mutate(Regression = "Baseline Regression",
+    sale_price.Predict = predict(reg.training, Philly.test),
          sale_price.Error = sale_price.Predict - sale_price,
          sale_price.AbsError = abs(sale_price.Predict - sale_price),
          sale_price.APE = (abs(sale_price.Predict - sale_price)) / sale_price.Predict)%>%
@@ -436,4 +438,161 @@ Philly.test %>%
             MAPE = mean(sale_price.APE)*100) %>%
   kbl(col.name=c('Mean Absolute Error','Mean Absolute Percentage Error')) %>%
   kable_classic()
+```
+# Nearest Neighbor 
+```{r Nearest Neighbor}
+coords <- st_coordinates(HDFinal) 
+
+neighborList <- knn2nb(knearneigh(coords, 5))
+
+spatialWeights <- nb2listw(neighborList, style="W")
+
+HDFinal$lagPrice <- lag.listw(spatialWeights, HDFinal$sale_price)
+
+```
+
+```{r}
+coords.test <-  st_coordinates(Philly.test) 
+
+neighborList.test <- knn2nb(knearneigh(coords.test, 5))
+
+spatialWeights.test <- nb2listw(neighborList.test, style="W")
+ 
+Philly.test %>% 
+  mutate(lagPriceError = lag.listw(spatialWeights.test, sale_price.Error)) %>%
+  ggplot()+
+  geom_point(aes(x =lagPriceError, y =sale_price.Error))
+
+
+
+```
+# Moran's I
+
+```{r Moran's I}
+
+moranTest <- moran.mc(Philly.test$sale_price.Error, 
+                      spatialWeights.test, nsim = 999)
+
+ggplot(as.data.frame(moranTest$res[c(1:999)]), aes(moranTest$res[c(1:999)])) +
+  geom_histogram(binwidth = 0.01) +
+  geom_vline(aes(xintercept = moranTest$statistic), colour = "#FA7800",size=1) +
+  scale_x_continuous(limits = c(-1, 1)) +
+  labs(title="Observed and permuted Moran's I",
+       subtitle= "Observed Moran's I in orange",
+       x="Moran's I",
+       y="Count") +
+  plotTheme()
+
+
+
+
+```
+# Table of Average Predictions
+```{r kable table}
+Philly.test %>%
+as.data.frame() %>%
+  group_by(DIST_NAME) %>%
+    summarize(meanPrediction = mean(sale_price.Predict),
+              meanPrice = mean(sale_price)) %>%
+      kable() %>% 
+  kable_styling()
+```
+
+# Regression Neighbrohood Effect
+```{r Hood Effects}
+reg.nhood <- lm(sale_price ~ ., data = as.data.frame(Philly.training) %>% 
+                                 dplyr::select(sale_price, shooting_halfmile, interior_condition, total_livable_area, 
+                                           DIST_NAME, mean_profadv,
+                                           DevelopmentArea, tree_count, medHHInc, 
+                                           exterior_condition, fireplaces, WhiteHOrate, AssistedIncRate,
+                                           rest_per_sqmi, number_of_bathrooms)) #have to edit later so the regressions are different
+
+Philly.test.nhood <-
+ Philly.test %>%
+  mutate(Regression = "Neighborhood Effects",
+         sale_price.Predict = predict(reg.nhood, Philly.test),
+         sale_price.Error = sale_price.Predict- sale_price,
+         sale_price.AbsError = abs(sale_price.Predict- sale_price),
+         sale_price.APE = (abs(sale_price.Predict- sale_price)) / sale_price)%>%
+  filter(sale_price < 5000000)
+ 
+ Philly.test %>%
+  mutate(Regression = "Neighborhood Effects",
+         sale_price.Predict = predict(reg.nhood, Philly.test),
+         sale_price.Error = sale_price.Predict- sale_price,
+         sale_price.AbsError = abs(sale_price.Predict- sale_price),
+         sale_price.APE = (abs(sale_price.Predict- sale_price)) / sale_price)%>%
+  filter(sale_price < 5000000)
+
+
+```
+
+
+```{r}
+bothRegressions <- 
+  rbind(
+    dplyr::select(Philly.test, starts_with("sale_price"), Regression, DIST_NAME) %>%
+      mutate(lagPriceError = lag.listw(spatialWeights.test, sale_price.Error)),
+    dplyr::select(Philly.test.nhood, starts_with("sale_price"), Regression, DIST_NAME) %>%
+      mutate(lagPriceError = lag.listw(spatialWeights.test, sale_price.Error)))  
+
+```
+
+```{r}
+st_drop_geometry(bothRegressions) %>%
+  gather(Variable, Value, -Regression, -DIST_NAME) %>%
+  filter(Variable == "sale_price.AbsError" | Variable == "sale_price.APE") %>%
+  group_by(Regression, Variable) %>%
+    summarize(meanValue = mean(Value, na.rm = T)) %>%
+    spread(Variable, meanValue) %>%
+    kable()
+```
+
+## Further examination of errors
+
+Predicted versus observed plots - what does it mean if the line is above or below y=x?
+
+```{r}
+bothRegressions %>%
+  dplyr::select(sale_price.Predict, sale_price, Regression) %>%
+    ggplot(aes(sale_price, sale_price.Predict)) +
+  geom_point() +
+  stat_smooth(aes(sale_price, sale_price), 
+             method = "lm", se = FALSE, size = 1, colour="#FA7800") + 
+  stat_smooth(aes(sale_price.Predict, sale_price), 
+              method = "lm", se = FALSE, size = 1, colour="#25CB10") +
+  facet_wrap(~Regression) +
+  labs(title="Predicted sale price as a function of observed price",
+       subtitle="Orange line represents a perfect prediction; Green line represents prediction") +
+  plotTheme()
+```
+# Spatial Pattern of Both Regressions
+```{r}
+st_drop_geometry(bothRegressions) %>%
+  group_by(Regression, DIST_NAME) %>%
+  summarize(mean.MAPE = mean(sale_price.APE, na.rm = T)) %>%
+  ungroup() %>% 
+  left_join(planning_districts) %>%
+    st_sf() %>%
+    ggplot() + 
+      geom_sf(aes(fill = mean.MAPE)) +
+      geom_sf(data = bothRegressions, colour = "black", size = .5) +
+      facet_wrap(~Regression) +
+      scale_fill_gradient(low = palette5[1], high = palette5[5],
+                          name = "MAPE") +
+      labs(title = "Mean test set MAPE by neighborhood") +
+      mapTheme()
+
+```
+```{r Income and Race}
+grid.arrange(ncol = 2,
+  ggplot() + geom_sf(data = na.omit(acsTractsPHL.2021), aes(fill = WhiteHOrate)) +
+  #  scale_fill(values = c("#25CB10", "#FA7800"), name="Race Context") +
+    labs(title = "Race Context") +
+    mapTheme() + theme(legend.position="bottom"), 
+  ggplot() + geom_sf(data = na.omit(acsTractsPHL.2021), aes(fill = medHHInc)) +
+ #   scale_fill(values = c("#25CB10", "#FA7800"), name="Income Context") +
+    labs(title = "Income Context") +
+    mapTheme() + theme(legend.position="bottom"))
+
 ```
