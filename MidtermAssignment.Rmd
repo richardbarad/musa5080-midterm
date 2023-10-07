@@ -395,9 +395,9 @@ ggplot()+
 
 ```{r Actually something engaging}
 ggplotly(
-  ggplot(restaurants)+
-  geom_sf(aes(fill = TOTAL_RESTAURANTS))+
-  scale_fill_gradient(low = "black", high = "yellow", name = "Total Restaurants")
+  ggplot(acsTractsPHL.2021)+
+  geom_sf(aes(fill = HHOccupiedRate))+
+  scale_fill_gradient(low = "black", high = "yellow", name = "Rate of House Ownership")
 )
 
 ```
@@ -584,14 +584,20 @@ st_drop_geometry(bothRegressions) %>%
       mapTheme()
 
 ```
-```{r Income and Race}
+```{r Income and Race, fig.width=10}
 grid.arrange(ncol = 2,
-  ggplot() + geom_sf(data = na.omit(acsTractsPHL.2021), aes(fill = WhiteHOrate)) +
-  #  scale_fill(values = c("#25CB10", "#FA7800"), name="Race Context") +
+  ggplot() + 
+    geom_sf(data=planning_districts,fill='grey80',color='transparent')+
+    geom_sf(data = na.omit(acsTractsPHL.2021), aes(fill = WhiteHOrate)) +
+  scale_fill_gradient(low = "black", high = "white", name = "Percentage of White Homeowners")+
     labs(title = "Race Context") +
     mapTheme() + theme(legend.position="bottom"), 
-  ggplot() + geom_sf(data = na.omit(acsTractsPHL.2021), aes(fill = medHHInc)) +
- #   scale_fill(values = c("#25CB10", "#FA7800"), name="Income Context") +
+  ggplot() + 
+    geom_sf(data=planning_districts,fill='grey80',color='transparent')+
+    geom_sf(data = na.omit(acsTractsPHL.2021), aes(fill = medHHInc)) +
+ scale_fill_gradient(low = "black", high = "green", name = "Median Household Income",
+                    na.value = 'grey80',
+                    labels = c('$0', '$50k', '$100k', '$150k', '$200k'))+
     labs(title = "Income Context") +
     mapTheme() + theme(legend.position="bottom"))
 
