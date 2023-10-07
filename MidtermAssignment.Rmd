@@ -222,7 +222,7 @@ house_data$dist_urb_corridor <- as.double(st_distance(house_data, corridors[near
 
 ## Shootings
 
-We calculate the number of shootings within a 1/2 mile and 1/4 mile radius of each home.
+We calculate the number of shootings within a 1/2 mile and 1/4 mile radius of each home. Shootings can indicate home values because of their impact on the perception of crime in the area and the buyer's concern for personal safety or property damage. This database was sourced directly from the Carto, another open source website. 
 
 ```{r homicides data}
 shootings_url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings&filename=shootings&format=geojson&skipfields=cartodb_id"
@@ -249,6 +249,7 @@ house_data <- st_intersection(shootings,st_buffer(house_data,2640/2)) %>%
 ```
 
 # Join All Data to House Sales Data
+After gathering data from various sources, we now have to coalesce them into one final database for our prediction model. 
 
 ```{r Joining All Tables}
 HDJoin <- st_intersection(house_data, restaurants %>%
@@ -284,6 +285,9 @@ C <- ggplot()+
 D <- ggplot()+
   geom_sf(data=restaurants,aes(fill = q5(TOTAL_RESTAURANTS)))
 ```
+# Summary Statistics 
+
+The table  of Summary Statistics provides us a basis on the range of values and statistical information about each variable we have in our database. With all these factors considered, we can collectively use these variables to predict home prices and provide a visualization of how related specific variables are at indicating such. 
 
 ```{r Summary Statistics}
 HDFinal_nongeom <- HDFinal %>% st_drop_geometry()
@@ -293,6 +297,12 @@ HDFinal_nongeom <- HDFinal_nongeom %>%
 
 stargazer(HDFinal_nongeom, type = 'text', title= "Table 1: Summary Statistics")
 ```
+
+
+# Correlation Matrix
+
+A correlation matrix compares factors against one another to see how related they are at determining the others value. Each box presented can indicate whether there is a correlation (directly or inverse) or little relationship between them. We are able to see strong correlation between many factors. We are interested in all variables that show a significant relationship with sale price, specifically taking those with an absolute value of 0.25 or greater. 
+
 ```{r correlation_matrix, fig.height=6.5, fig.width=17.5}
 HDFinal_nongeom %>% 
   correlate() %>% 
