@@ -58,7 +58,7 @@ The next source of data, similar to the U.S Census, was leveraged by Social Expl
 
 ## Census Data
 
-We download the following data from the census: ADD LIST
+We download the following data from the census: Population Estimate, Total Housing Units, Total Vacant Units, Median Household Income, Households with Public Assisted Income, Owner-Occupied Housing Units, White Homeowners, and Total Occupied Housing Units. These variables provide a basic overview of housing in Philadelphia but are not sufficient alone in predicting future sale prices. 
 
 ```{r load_key, warning = FALSE, eval = FALSE}
 census_api_key("2ad9e737f3d9062836cb46bb568be5467f86d3db", overwrite = TRUE)
@@ -274,17 +274,6 @@ HDFinal <- st_intersection(HDBind, acsTractsPHL.2021 %>%
 
 ```
 
-
-``` {r make_maps (TO DELETE LATER)}
-
-
-
-C <- ggplot()+
-  geom_sf(data=restaurants,aes(fill = q5(rest_per_mi)))
-
-D <- ggplot()+
-  geom_sf(data=restaurants,aes(fill = q5(TOTAL_RESTAURANTS)))
-```
 # Summary Statistics 
 
 The table  of Summary Statistics provides us a basis on the range of values and statistical information about each variable we have in our database. With all these factors considered, we can collectively use these variables to predict home prices and provide a visualization of how related specific variables are at indicating such. 
@@ -303,15 +292,15 @@ stargazer(HDFinal_nongeom, type = 'text', title= "Table 1: Summary Statistics")
 
 A correlation matrix compares factors against one another to see how related they are at determining the others value. Each box presented can indicate whether there is a correlation (directly or inverse) or little relationship between them. We are able to see strong correlation between many factors. We are interested in all variables that show a significant relationship with sale price, specifically taking those with an absolute value of 0.3 or greater. 
 
-```{r correlation_matrix, fig.height=6.5, fig.width=17.5}
+```{r correlation_matrix, fig.width=12.5, fig.height=20}
 HDFinal_nongeom %>% 
   correlate() %>% 
   autoplot() +
-  geom_text(aes(label = round(r,digits=2)), size = 2, order = "hclust", type = "upper", tl.cex = 0.7)
+  geom_text(aes(label = round(r,digits=2)), size = 3.5, order = "hclust", type = "upper", tl.cex = 3)
 
 ```
 # Dependent Varaiable Correlations 
-The four graphs below represent four key dependent variables that broadly cover each aspect of a neighborhood in order to determine house prices. Assited Income focuses on the homeowner's socioeconomic status, resulting in an inverse relationship. Tree count and total livable area are directly correlated with a house's desirability because of home size being considered a luxury and more trees often indicates better care for a neighborhood. The last dependent variable we look at is the white homeowner rate. White homeownership can indicate a "perceived" higher price value because of racial segregation, wealth inequality, and potential gentrification. 
+The four graphs below represent four key dependent variables that broadly cover each aspect of a neighborhood in order to determine house prices. Assisted Income focuses on the homeowner's socioeconomic status, resulting in an inverse relationship. Tree count and total livable area are directly correlated with a house's desirability because of home size being considered a luxury and more trees often indicates better care for a neighborhood. The last dependent variable we look at is the white homeowner rate. White homeownership can indicate a "perceived" higher price value because of racial segregation, wealth inequality, and potential gentrification. 
 
 
 ```{r dependent variable correlation, fig.height=6, fig.width=15}
@@ -356,12 +345,12 @@ ggplot()+
   geom_sf(data=HDFinal,aes(colour = (AssistedIncRate * 100)),size=0.5)+
   scale_color_viridis(name = "Assisted Income Per 100 Households")+
   geom_sf(data=planning_districts,fill='transparent',color='black')+
-mapTheme()
+mapTheme() 
 ```
 
 # Interesting Map 2, Student Performance by School 
 
-The school system in a neighborhood can be a deal-breaker factor for families seeking a home in an area. The Keystone Exam is the State's index of evaluating school performance and student's education quality. 
+The school system in a neighborhood can be a deal-breaker factor for families seeking a home in an area. The Keystone Exam is the State's index of evaluating school performance and student's education quality. Excellent schools are all found on the outskirts. 
 
 ```{r Interesting Maps Part 2}
 #profadv is the percentage of students recieved proficient OR advanced scores on Keystore Exam by Penn DOE
@@ -429,7 +418,6 @@ reg.training <-
                                            rest_per_sqmi, number_of_bathrooms))
 summary(reg.training)
 
-
 ```
 # Regression Training
 For  this process we are now teaching the model to predict the housing prices. We have provided data points as mentioned prior each with their own set of values correlated to sale price. Now, the model learns that relationship and produces its own set of values when given new data. 
@@ -466,8 +454,12 @@ spatialWeights <- nb2listw(neighborList, style="W")
 HDFinal$lagPrice <- lag.listw(spatialWeights, HDFinal$sale_price)
 
 ```
+# Spatial Lag
 
-```{r}
+Spatial Lag is the concept that depicts the relationship between the variables we are interested in and having that in a neighborhood context. The Spatial Lag is used to learnt the effect of how nearby house prices can change a house. 
+
+The scatterplot below shows a negative correlation because of negative values seen by the points outside the cluster, but this correlation is relatively small. What we can conclude from this graph is that the model is going to have a more difficult time predicting home prices for houses with lower sale prices. 
+```{r Spatial Lag}
 coords.test <-  st_coordinates(Philly.test) 
 
 neighborList.test <- knn2nb(knearneigh(coords.test, 5))
@@ -478,16 +470,16 @@ Philly.test %>%
   mutate(lagPriceError = lag.listw(spatialWeights.test, sale_price.Error)) %>%
   ggplot()+
   geom_point(aes(x =lagPriceError, y =sale_price.Error))
-
-
+  geom_smooth(method="lm", color="red")
+  plotTheme()
 
 ```
-# Moran's I
+# Morans I
 Moran's I is a measurement in statistics that evaluates the tendency for data points with similar values to occur near one another. Similar to Nearest Neighbor to statistically prove that houses spatially close to each other would have similar sale prices. This type of measurement helps us identify high and low value clusters (i.e different neighborhoods and their perceived value). 
 
 In the graph below see a thin distribution in gray, those are the counts of houses and their sale prices we provided the regression model. The orange line represents the Moran's I value, determining if there is any correlation between value and location. The observed Moran's I is roughly 0.2, which is considered statistically significant and suggests that the spatial distribution  is correlated. 
 
-```{r Moran's I}
+```{r "Moran's I"}
 
 moranTest <- moran.mc(Philly.test$sale_price.Error, 
                       spatialWeights.test, nsim = 999)
@@ -590,7 +582,7 @@ st_drop_geometry(bothRegressions) %>%
       geom_sf(data = bothRegressions, colour = "black", size = .5) +
       facet_wrap(~Regression) +
       scale_fill_gradient(low = palette5[1], high = palette5[5],
-                          name = "MAPE") +
+                          name = "Mean Absolute Percent Error") +
       labs(title = "Mean test set MAPE by neighborhood") +
       mapTheme()
 
@@ -620,3 +612,10 @@ grid.arrange(ncol = 2,
     mapTheme() + theme(legend.position="bottom"))
 
 ```
+# Accuracy  & Generalizability 
+
+Is it accurate but not generalizable as there were specific metrics used for Philadelphia. Any scalability for other cities would require research on their school systems, crime statistics, and other external sources. 
+
+# Conclusion 
+
+Overall we do not recommend the model because of the racial bias it includes which can create disadvantages to marginalized communities. While the model may be quite accurate, it is crucial to consider the ethical implications of its use. Because of the racial profiling, it is assigning risk to people, and focuses heavily on the homeowner's characteristics rather than the home itself. This process directly leads to discrimination, especially because the model is learning socioeconomic results based on historical discriminatory policy. Ultimately, if your sole priority is to learn what the next sale price is, this model will successfully fulfill that. If one does not want to perpetuate existing inequalities and ethically focus on a righteous model that has an objective learning procedure, we must seek alternative solutions. 
