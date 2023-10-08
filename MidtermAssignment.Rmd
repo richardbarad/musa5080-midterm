@@ -504,6 +504,8 @@ ggplot(as.data.frame(moranTest$res[c(1:999)]), aes(moranTest$res[c(1:999)])) +
   plotTheme()
 ```
 # Table of Average Predictions
+The table below shows the the average prediction between what the model created and the actual average price from the data we provided it. We see there is a reasonably strong level of  accuracy between what is predicted and what is actual. What needs to be considered is that these are the averages, and that the predicted price in any district can vary widely. 
+
 ```{r kable table}
 Philly.test %>%
 as.data.frame() %>%
@@ -515,6 +517,8 @@ as.data.frame() %>%
 ```
 
 # Regression Neighbrohood Effect (EDIT VARIABLES)
+Here we compare how including the neighborhood autocorrelation changes the sale price predictions compared to when without it. As shown from the graphs before, there is a statistically significant relationship between the sale price of houses and the neighborhood they are classified to be in. We will create a new model that compares the accuracy of with and without the neighborhood correlation. 
+
 ```{r Hood Effects}
 reg.nhood <- lm(sale_price ~ ., data = as.data.frame(Philly.training) %>% 
                                  dplyr::select(sale_price, shooting_halfmile, interior_condition, total_livable_area, 
@@ -522,7 +526,7 @@ reg.nhood <- lm(sale_price ~ ., data = as.data.frame(Philly.training) %>%
                                            DevelopmentArea, tree_count, medHHInc, 
                                            exterior_condition, fireplaces, WhiteHOrate, AssistedIncRate,
                                            rest_per_sqmi, number_of_bathrooms)) 
-#have to edit later so the regressions are different
+#have to edit later so the regressions are different, we have to remove DISTRICT NAME from first one to make it less accurate then add this one to show difference.....
 
 Philly.test.nhood <-
  Philly.test %>%
@@ -532,18 +536,8 @@ Philly.test.nhood <-
          sale_price.AbsError = abs(sale_price.Predict- sale_price),
          sale_price.APE = (abs(sale_price.Predict- sale_price)) / sale_price)%>%
   filter(sale_price < 5000000)
- 
- Philly.test %>%
-  mutate(Regression = "Neighborhood Effects",
-         sale_price.Predict = predict(reg.nhood, Philly.test),
-         sale_price.Error = sale_price.Predict- sale_price,
-         sale_price.AbsError = abs(sale_price.Predict- sale_price),
-         sale_price.APE = (abs(sale_price.Predict- sale_price)) / sale_price)%>%
-  filter(sale_price < 5000000)
-
 
 ```
-
 
 ```{r}
 bothRegressions <- 
@@ -565,9 +559,8 @@ st_drop_geometry(bothRegressions) %>%
     kable()
 ```
 
-## Further examination of errors
-
-Predicted versus observed plots - what does it mean if the line is above or below y=x?
+## Predicted Sale Price vs the Observed Price 
+The graph below shows overall accuracy of the two models created compared to actual prices used to train the machine. The neighborhood effect model does adds further accuracy due neighborhood clustering being factored in. 
 
 ```{r}
 bothRegressions %>%
@@ -584,6 +577,8 @@ bothRegressions %>%
   plotTheme()
 ```
 # Spatial Pattern of Both Regressions
+We can continue to see that there is a correlation between neighborhoods categories and a home's sale price. This spatial autocorrelation is defined by these two maps that show the difference the neighborhood effect has on predictions. 
+
 ```{r}
 st_drop_geometry(bothRegressions) %>%
   group_by(Regression, DIST_NAME) %>%
@@ -601,6 +596,13 @@ st_drop_geometry(bothRegressions) %>%
       mapTheme()
 
 ```
+
+
+# Income and Race
+These two maps show the significant income gap between races in Philadelphia. There is an evident parallel between higher income areas and fewer minority populations. There are many reasons historically, politically, and through socioeconomic that create and define these boundaries. But that is also exactly why incorporating race as a factor in the models prior were not recommended. 
+
+Adding race to a model adds a cascading effect of discrimination that feeds future predictions to assume race is a pre-determined factor that effects house values. Race is only a factor in housing models because of historical systemic racism and discriminatory policies that created parallels between racial and economic disparity. 
+
 ```{r Income and Race, fig.width=10}
 grid.arrange(ncol = 2,
   ggplot() + 
