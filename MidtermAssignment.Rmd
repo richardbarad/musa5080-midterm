@@ -428,7 +428,6 @@ reg.training <-
                                            exterior_condition, fireplaces, WhiteHOrate, AssistedIncRate,
                                            rest_per_sqmi, number_of_bathrooms))
 summary(reg.training)
-#stargazer(reg.training, type = 'text', title= "Regression Training Results")
 
 
 ```
@@ -450,7 +449,7 @@ Philly.test <-
 Philly.test %>% 
   st_drop_geometry() %>%
   summarise(MAE = mean(sale_price.AbsError),
-            MAPE = mean(sale_price.APE)*100) %>%
+            MAPE = abs(mean(sale_price.APE)*100)) %>%
   kbl(col.name=c('Mean Absolute Error','Mean Absolute Percentage Error')) %>%
   kable_classic()
 ```
@@ -516,7 +515,7 @@ as.data.frame() %>%
   kable_styling()
 ```
 
-# Regression Neighbrohood Effect (EDIT VARIABLES)
+# Regression Neighbrohood Effect 
 Here we compare how including the neighborhood autocorrelation changes the sale price predictions compared to when without it. As shown from the graphs before, there is a statistically significant relationship between the sale price of houses and the neighborhood they are classified to be in. We will create a new model that compares the accuracy of with and without the neighborhood correlation. 
 
 ```{r Hood Effects}
@@ -526,7 +525,7 @@ reg.nhood <- lm(sale_price ~ ., data = as.data.frame(Philly.training) %>%
                                            DevelopmentArea, tree_count, medHHInc, 
                                            exterior_condition, fireplaces, WhiteHOrate, AssistedIncRate,
                                            rest_per_sqmi, number_of_bathrooms)) 
-#have to edit later so the regressions are different, we have to remove DISTRICT NAME from first one to make it less accurate then add this one to show difference.....
+
 
 Philly.test.nhood <-
  Philly.test %>%
@@ -560,7 +559,7 @@ st_drop_geometry(bothRegressions) %>%
 ```
 
 ## Predicted Sale Price vs the Observed Price 
-The graph below shows overall accuracy of the two models created compared to actual prices used to train the machine. The neighborhood effect model does adds further accuracy due neighborhood clustering being factored in. 
+The graph below shows overall accuracy of the two models created compared to actual prices used to train the machine. The neighborhood effect model, while the numbers can show a fairly noticeable increase in accuracy, when graphed, we noticed a minimal change in its predictions. One potential reason is that the model already had some form of "neighborhood effect" that was pre-calculated in the model, and so adding the additional information was mere reinforcement that could only create so much additionality to its predictions. 
 
 ```{r}
 bothRegressions %>%
@@ -577,7 +576,7 @@ bothRegressions %>%
   plotTheme()
 ```
 # Spatial Pattern of Both Regressions
-We can continue to see that there is a correlation between neighborhoods categories and a home's sale price. This spatial autocorrelation is defined by these two maps that show the difference the neighborhood effect has on predictions. 
+We can continue to see that there is a correlation between neighborhoods categories and a home's sale price. This spatial autocorrelation is defined by these two maps that show the difference the neighborhood effect has on predictions. When depicted by district, the map  informed us that the baseline model becomes less reliable in the north central area, specifically where there is the lowest values in housing as seen in prior figures. 
 
 ```{r}
 st_drop_geometry(bothRegressions) %>%
