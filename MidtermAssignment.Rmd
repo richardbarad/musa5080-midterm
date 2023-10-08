@@ -208,7 +208,7 @@ acsTractsPHL.2021 <- st_intersection(acsTractsPHL.2021, trees) %>% #Determine wh
 
 ## Urban Corridors
 
-We calculate the distance to the nearest urban corridor. Urban corridors, for most houses, are considered proximity to amenities, decrease transportation costs, and has an overall higher quality of life. It has to also be noted that outliers are present in suburban housing too. For an urban development in general Philadelphia, being close to urban corridors would be considered an amenities, raising the home value. For subruban areas on the outskirts of the city, these car-dependent neighborhoods want to be away from corridors, preferring quietness, privacy, and distance. 
+We calculate the distance to the nearest urban corridor. Urban corridors, for most houses, are considered proximity to amenities, decrease transportation costs, and has an overall higher quality of life. It has to also be noted that outliers are present in suburban housing too. For an urban development in general Philadelphia, being close to urban corridors would be considered an amenities, raising the home value. For suburban areas on the outskirts of the city, these car-dependent neighborhoods want to be away from corridors, preferring quietness, privacy, and distance. 
 
 ```{r corridors data}
 corridors_url <- "https://opendata.arcgis.com/datasets/f43e5f92d34e41249e7a11f269792d11_0.geojson"
@@ -329,7 +329,7 @@ HDFinal_nongeom %>%
 
 # Map of Home Prices in Philadelphia
 
-This map explores the variation in 2021 home prices across Philadelphia. We noticed the most expensive areas are located near Center City or far outskirts such as Chestnut Hill.   
+This map explores the variation in 2021 home prices across Philadelphia. We noticed the most expensive areas are located near Center City or far outskirts such as Chestnut Hill. We notice a ring-like effect in the city  where the most expensive areas are either in the core center where all the activity is, or furthest away where there is the least interaction with the city. 
 
 ```{r Map of Home Prices}
 HDFinal <- HDFinal %>% 
@@ -346,8 +346,10 @@ ggplot()+
   mapTheme()
     
 ```
+# Interesting Map 1, Assisted Income
 
-# 
+This map shows the rate of people requiring assisted income in the city. We can observe that the central northeast, areas such as Kensington, Fairhill, and Feltonville are most reliant on government assistance for income. And the surrounding area may be affected by the poverty that is prominent there through perimeters that forms, surrounding the "yellow" core.  
+ 
 ```{r 3 Interesting Maps Part 1}
 ggplot()+
   geom_sf(data=planning_districts,fill='grey80',color='transparent')+
@@ -356,6 +358,10 @@ ggplot()+
   geom_sf(data=planning_districts,fill='transparent',color='black')+
 mapTheme()
 ```
+
+# Interesting Map 2, Student Performance by School 
+
+The school system in a neighborhood can be a deal-breaker factor for families seeking a home in an area. The Keystone Exam is the State's index of evaluating school performance and student's education quality. 
 
 ```{r Interesting Maps Part 2}
 #profadv is the percentage of students recieved proficient OR advanced scores on Keystore Exam by Penn DOE
@@ -366,7 +372,9 @@ ggplot()+
   geom_sf(data=planning_districts,fill='transparent',color='black')+
 mapTheme()
 ```
+# Interesting Map 3, Heat Map of Shootings
 
+We depicted where all shootings have occurred and created a heat map that shows the "hot spot" of where shootings most often occur. Similarly to seeing the education ratings & government assistance, we notice crime is clustered just north of the city center and we it has residual spillover in areas north of said cluster. Central City and areas south of the largest hot spot appear spared from gun violence. 
 ```{r Interesting Maps Part 3}
 ggplot()+
   geom_sf(data=planning_districts,fill='grey80',color='transparent')+
@@ -379,7 +387,7 @@ ggplot()+
   geom_sf(data=planning_districts,fill='transparent',color='black')+
   mapTheme()
 ```
-
+# Might want to delete this later lmao idk
 ```{r "Something Engaging"}
 ggplot()+
   geom_sf(data=planning_districts,fill='grey90',color='transparent')+
@@ -392,16 +400,19 @@ ggplot()+
   mapTheme()
 
 ```
-
+# "Something Engaging" Interactive Map of Houseowner-Occupied Rate 
+Provided below is an map that depicts where the Homeowner occupies the house they reside in, deferring from places where people rent. If you hover above the tract, you'll see the exact rate of home ownership in the area. Other tools are available on the top right of the map. 
 ```{r Actually something engaging}
 ggplotly(
   ggplot(acsTractsPHL.2021)+
   geom_sf(aes(fill = HHOccupiedRate))+
-  scale_fill_gradient(low = "black", high = "yellow", name = "Rate of House Ownership")
+  scale_fill_gradient(low = "black", high = "yellow", name = "Rate of Home Ownership")
 )
 
 ```
 # Training and Test Sets
+
+We have decided on a filtered list of key dependent variables to use to predict home values. Those factors being the following: shootings within 1/2 mile, interior condition, total livable area, neighborhood name, trees in the area, median household income,  exterior condition, if there is a fireplace, white homeownership rate, assisted income rate, restaurants per square mile, and the number of bathrooms.  
 ```{r Training and Test Set}
 inTrain <- createDataPartition(
               y = paste(HDFinal$DIST_NAME), 
@@ -422,6 +433,10 @@ summary(reg.training)
 
 ```
 # Regression Training
+For  this process we are now teaching the model to predict the housing prices. We have provided data points as mentioned prior each with their own set of values correlated to sale price. Now, the model learns that relationship and produces its own set of values when given new data. 
+
+For this table below specifically, you see how far off it is from the actual values it compares to, known as their absolute error. Because we are working with large value commodities (i.e housing), the increment the model is  off by can be quite large. It is equally important to look at the percentage value to see the relative amount it is off by as well. 
+
 ```{r Reg Training}
 Philly.test <-
   Philly.test %>%
@@ -440,6 +455,8 @@ Philly.test %>%
   kable_classic()
 ```
 # Nearest Neighbor 
+
+A Nearest Neighbor analysis is  our way of  identifying the distribution of points in a given space, whether by measuring distance or a specific value. For our analysis, we can use Nearest Neighbor values to additionally predict sale prices, as neighboring homes would tend to feature the same attributes as one another, therefore, can have a similar  price range. 
 ```{r Nearest Neighbor}
 coords <- st_coordinates(HDFinal) 
 
@@ -467,6 +484,9 @@ Philly.test %>%
 
 ```
 # Moran's I
+Moran's I is a measurement in statistics that evaluates the tendency for data points with similar values to occur near one another. Similar to Nearest Neighbor to statistically prove that houses spatially close to each other would have similar sale prices. This type of measurement helps us identify high and low value clusters (i.e different neighborhoods and their perceived value). 
+
+In the graph below see a thin distribution in gray, those are the counts of houses and their sale prices we provided the regression model. The orange line represents the Moran's I value, determining if there is any correlation between value and location. The observed Moran's I is roughly 0.2, which is considered statistically significant and suggests that the spatial distribution  is correlated. 
 
 ```{r Moran's I}
 
@@ -482,10 +502,6 @@ ggplot(as.data.frame(moranTest$res[c(1:999)]), aes(moranTest$res[c(1:999)])) +
        x="Moran's I",
        y="Count") +
   plotTheme()
-
-
-
-
 ```
 # Table of Average Predictions
 ```{r kable table}
@@ -498,14 +514,15 @@ as.data.frame() %>%
   kable_styling()
 ```
 
-# Regression Neighbrohood Effect
+# Regression Neighbrohood Effect (EDIT VARIABLES)
 ```{r Hood Effects}
 reg.nhood <- lm(sale_price ~ ., data = as.data.frame(Philly.training) %>% 
                                  dplyr::select(sale_price, shooting_halfmile, interior_condition, total_livable_area, 
                                            DIST_NAME, mean_profadv,
                                            DevelopmentArea, tree_count, medHHInc, 
                                            exterior_condition, fireplaces, WhiteHOrate, AssistedIncRate,
-                                           rest_per_sqmi, number_of_bathrooms)) #have to edit later so the regressions are different
+                                           rest_per_sqmi, number_of_bathrooms)) 
+#have to edit later so the regressions are different
 
 Philly.test.nhood <-
  Philly.test %>%
@@ -587,13 +604,13 @@ st_drop_geometry(bothRegressions) %>%
 ```{r Income and Race, fig.width=10}
 grid.arrange(ncol = 2,
   ggplot() + 
-    geom_sf(data=planning_districts,fill='grey80',color='transparent')+
+    geom_sf(data=planning_districts,fill='beige',color='transparent')+
     geom_sf(data = na.omit(acsTractsPHL.2021), aes(fill = WhiteHOrate)) +
   scale_fill_gradient(low = "black", high = "white", name = "Percentage of White Homeowners")+
     labs(title = "Race Context") +
     mapTheme() + theme(legend.position="bottom"), 
   ggplot() + 
-    geom_sf(data=planning_districts,fill='grey80',color='transparent')+
+    geom_sf(data=planning_districts,fill='beige',color='transparent')+
     geom_sf(data = na.omit(acsTractsPHL.2021), aes(fill = medHHInc)) +
  scale_fill_gradient(low = "black", high = "green", name = "Median Household Income",
                     na.value = 'grey80',
