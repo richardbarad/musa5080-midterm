@@ -52,15 +52,16 @@ source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-L
 
 # Load House Sales Data from Github
 
-We start by importing the home sales data set which was provided for our study. The dataset includes key information on internal home features, such as number of bathrooms, number of stories, total livable area, and interior condition. We carefully reviewed the data to identify which internal charatersitics from the provided dataset could be used. For instance, some home attributes like the presence of central air were incomplete and contained multiple blank values which prevented us from using them in our model. 
+We start by importing the home sales data set which was provided for our study. The dataset includes key information on internal home characteristics, such as number of bathrooms, number of stories, total livable area, and interior condition. We carefully reviewed the data to identify which internal characteritics from the provided dataset could be used in home sales price model. Some home attributes like the presence of central air were incomplete and contained multiple blank values which prevented us from using them in our model. 
 
-Other variables, required cleaning and usage of assumptions to ensure the data completeness. The assumptions which were used to replace unknown values are listed below:
+Other variables, required cleaning and usage of assumptions to ensure data completeness. The assumptions which were used to replace unknown values are listed below:
 
-* 3,679 homes were listed as having zero bathrooms or did not have data on the number of bathrooms - it was assumed these homes contained one bathroom. * 8 homes did not have data on interior condition - an assumption was made that these homes had an average interior condition.  
+* 3,679 homes were listed as having zero bathrooms or did not have data on the number of bathrooms. It was assumed these homes contained one bathroom. 
+* 8 homes did not have data on interior condition - an assumption was made that these homes had an average interior condition.  
 * 1 home did not have data on exterior condition - an assumption was made that this home had an average interior condition
 * 208 homes did not have data on the number of fireplaces - an assumption was made that these homes did not have a fireplace
 
-These usage of assumptions was necessary in order to ensure that every home in the home sales dataset which was provided to us could be utilized in the model.
+These usage of assumptions was necessary in order to ensure that every home in the home sales dataset could be utilized in the model.
 
 ```{r read_github_data, results = "hide"}
 house_data <- st_read("https://raw.githubusercontent.com/mafichman/musa_5080_2023/main/Midterm/data/2023/studentData.geojson") %>%
@@ -86,23 +87,23 @@ house_data <- house_data %>%
 
 # Get Other Data
 
-In order to develop an enhanced understanding on the housing market, we acquired data that looks beyond the house itself, we gathered data on the houses proximity to key amenities including urban corridors, superior public schools, green space, and economic and racial demographics.
+In order to develop an enhanced understanding on the housing market, we acquired data that looks beyond the house itself, we gathered data on the external characteristics including the houses proximity to key amenities like urban corridors, superior public schools, restaurants, green space. We also examined the economic and racial demographics of the geogrhic area each home is located in.
 
 ## Census Data
 
-The first source used was from the U.S Census Bureau - specifically the American Community Survey (ACS) dataset - we used data from the 2021 five year ACS survey, which is the most recent ACS five year survey data available. We leveraged Social Explorer - a website which makes Census data table variables more accessible to identify available variables which we hypothesized would likely correlate with home sales price. 
+The first source used was from the U.S Census Bureau - specifically the American Community Survey (ACS) dataset - we used data from the 2021 five year ACS survey, which is the most recent ACS five year survey data available. We leveraged Social Explorer - a website which makes census data table variables more accessible to help identify variables which we hypothesized would likely correlate with home sales price. 
 
 After a through review - we selected the following data from ACS for potential inclusion in our housing sales price model. 
 
-* **White Home Ownership Rate**: Calculated at the Number of Homes where the home owner is white divided by the total housing units in the census tract. This variable gives our model a racial element. Race unfortunately continues to be an important predictor of home values in Philadelphia due the lasting impacts of redlining. We included White Home Ownership in our model because we hypthosize that home values will be higher in areas where the majority of home owners are white. 
+* **White Home Ownership Rate**: Calculated as the Number of Homes where the home owner is white divided by the total housing units in the census tract. This variable gives our model a racial element. Race unfortunately continues to be a predictor of home values in Philadelphia due the lasting impacts of redlining. We included white home ownership in our model because we hypothesize that home values will likely be higher in areas where the majority of home owners are white. 
 
 * **Median Household Income**: Median income levels can be an important predictor of home sales prices. We hypothesize that areas where median income levels are high are also likely to have high home sales values.  
 
 * **Percent of Households with Public Assistance Income**: Households receiving public assistance income are likely financial strained. We hypothesize that areas where a large number of households receive public assistance are likely to have lower home sales values. 
 
-* **Percent of Homes which are occupied**: Philadelphia contains many vacant lots and proprties when compared to other cities. We hypothesize that census tracts where a large number of homes are not occupied are likely to have lower home values. 
+* **Percent of Homes which are occupied**: Philadelphia contains many vacant lots and properties when compared to other cities. We hypothesize that census tracts where a large number of homes are not occupied are likely to have lower home values. 
 
-We download the following data from the 2015 5 year acs census: Population Estimate, Total Housing Units, Total Vacant Units, Median Household Income, Households with Public Assisted Income, Owner-Occupied Housing Units, White Homeowners, and Total Occupied Housing Units. These variables provide a basic overview of housing in Philadelphia but are not sufficient alone in predicting home sale prices. 
+These variables provide a basic overview of demographic and income characteristics of neighborhoods in Philadelphia.
 
 ```{r load_key, warning = FALSE, eval = FALSE}
 census_api_key("2ad9e737f3d9062836cb46bb568be5467f86d3db", overwrite = TRUE)
@@ -155,13 +156,15 @@ acsTractsPHL.2021 <- acsTractsPHL.2021 %>%
 
 ## Get Data from Open Data Philly
 
-OpenData Philly is an open source website that provides a catalog of free data, officially sponsored by the City of Philadelphia. The data provided by the city and other organizations allows us to collect a wide variety of information we can utilize to categorize, describe, and develop a profile for key geographic location chartersitics which might impact price.
+OpenData Philly is an open source website that provides a catalog of free data, officially sponsored by the City of Philadelphia. The data provided by the city and other organizations allows us to collect a wide variety of information we can utilize to categorize, describe, and develop a profile for key geographic characteristics which might impact price.
 
-The code bellow downloads the following datasets:
+The code below downloads the following datasets:
 
-* [Planning Districts](https://opendataphilly.org/datasets/planning-districts/) - planning districts will be used as a proxy for neighborhoods
+* [Planning Districts](https://opendataphilly.org/datasets/planning-districts/) - planning districts will be used as a proxy for neighborhoods.
+
 * [Redevelopment Areas](https://opendataphilly.org/datasets/redevelopment-certified-areas/) - this dataset provides information on blighted areas, blighted areas are defined by the city as "meeting one of seven city mandated criteria, including unsafe, unsanitary and inadequate conditions; economically or socially undesirable land use; and faulty street and lot layout". Our assumption is that prices are likely to be lower in blighted areas.
-* [Total Restaurants](https://opendataphilly.org/datasets/neighborhood-food-retail/) - this dataset includes information on the number restaurants per census block. The dataset was created from the Neighborhood Food Retail in Philadelphia report. 
+
+* [Total Restaurants](https://opendataphilly.org/datasets/neighborhood-food-retail/) - this dataset includes information on the number restaurants per census block. The dataset was created from the Neighborhood Food Retail in Philadelphia report. We include this dataset because we hypothesize that areas with more restaurants are likely to have higher sales price values. 
 
 ```{r get open_phily_data, results = "hide"}
 planning_districts <- st_read("https://opendata.arcgis.com/datasets/0960ea0f38f44146bb562f2b212075aa_0.geojson")%>%
@@ -182,11 +185,11 @@ restaurants <- restaurants %>%
 
 ## Load School Test Score Data
 
-The proximity to the best public schools is another key characteristic of a desirable neighborhood. We used data on student performance on the PSSA/Keystone test to help provide an understanding of school performance. The PSSA/Keystone includes Science, Math, and English Language Arts score. Students in Grades 3-8 complete this test, and each student receives a score of "Below Basic", "Basic", "Proficient" or "Advanced" on each section. Our analysis uses the percent of students who scored "Advanced" or "Proficient" at each school as a model input. In order to get one value, the percentage values on the three sections to get a single number for each school. 
+The proximity to the best public schools is another key characteristic of a desirable neighborhood. We used data on student performance on the PSSA/Keystone test to help provide an understanding of school performance. The PSSA/Keystone includes Science, Math, and English Language Arts score. Students in Grades 3-8 complete this test, and each student receives a score of "Below Basic", "Basic", "Proficient" or "Advanced" on each section. Our analysis uses the percent of students who scored "Advanced" or "Proficient" at each school as a model input. 
 
-As an example, if School A had 20 percent of students score proficient or advanced in math, 25 percent score proficient or advanced in sciences, and 35 percent scored proficient or advanced in English a value of 26.66 percent would be calculated as the net performance across all three sections.
+In order to get one value to input into our model, the percentage values on the three sections are averaged together get a single number for each school. As an example, if School A had 20 percent of students score proficient or advanced in math, 25 percent score proficient or advanced in sciences, and 35 percent scored proficient or advanced in English a value of 26.66 percent would be calculated as the net performance across all three sections. 26.66 is equal to average of 20, 25, and 35 percent.
 
-Our model assumes that residences are likely to send their students to the public school which is nearest to them. Thus, the test scores of the closest home to a house are assigned to the home. 
+Our model assumes that residences are likely to send their students to the public school which is closest to them. Thus, the test scores of the closest school to a house are assigned to the home. 
 
 ```{r school_data, cache=FALSE, results = "hide", message=FALSE}
 school_test_data <- read.csv('Data\\Schools\\2022 PSSA Keystone Actual (School_S).csv')
@@ -214,7 +217,9 @@ schools <- schools %>%
 
 ## Get Data on number of Trees from Open Data Philly
 
-Trees are a way of indicating aesthetic appeal, environmental benefits, and shade. We also hypothesized that greener areas with more trees are likely to have higher home values. Open Data Philly includes a data layer showing all trees in Philadelphia. We calculate the number of trees per square mile in each census tract and included this as a potential input in our housing sales model. 
+Trees help provide environmental benefits and shade, and residents may place value on having greenness in their neighborhood. We consider including the number of trees in our model because we hypothesize that greener areas with more trees are likely to have higher home sales values. 
+
+Open Data Philly includes a data layer showing all trees in Philadelphia. We calculate the number of trees per square mile in each census tract and included this as a potential input in our housing sales model. 
 
 ``` {r get_process_tree_data, results = "hide"}
 #Get Data on trees in Philadelphia
@@ -236,7 +241,7 @@ acsTractsPHL.2021 <- st_intersection(acsTractsPHL.2021, trees) %>% #Determine wh
 
 ## Urban Corridors
 
-Open Data Philly also included a dataset on urban corridors. We calculated the distance from each home in our home sales dataset to the nearest urban corridor. Living near an urban corridor increases proximity to amenities like restaurants, decreases transportation costs, and improved access to grocery stores. We hypothesize that living near an urban corridor should raise home values. However, there could be exceptions to this trend - car-dependent neighborhoods on the outskirts of the city may prefer to be away from corridors, preferring quietness and privacy over proximity to urban corridors. 
+Open Data Philly also includes a dataset on urban corridors. We calculated the distance from each home in our home sales dataset to the nearest urban corridor. Living near an urban corridor increases proximity to amenities like restaurants, decreases transportation costs, and improved access to grocery stores. We hypothesize that living near an urban corridor should raise home values. However, there could be exceptions to this pattern. Car-dependent neighborhoods on the outskirts of the city may prefer to be away from corridors, preferring quietness and privacy over proximity to urban corridors. This may result in distance to urban corridors having a non-linear correlation with sales price.
 
 ```{r corridors data}
 corridors_url <- "https://opendata.arcgis.com/datasets/f43e5f92d34e41249e7a11f269792d11_0.geojson"
@@ -250,7 +255,9 @@ house_data$dist_urb_corridor <- as.double(st_distance(house_data, corridors[near
 
 ## Shootings
 
-We calculate the number of shootings within a 1/2 mile and 1/4 mile radius of each home. Shootings can indicate home values because of their impact on the perception of crime in the area and the buyer's concern for personal safety or property damage. The shootings data was also obtained through Open Data Philly, the city stores this dataset on Carto.
+We calculate the number of shootings within a 1/2 mile and 1/4 mile radius of each home. Shootings can indicate home values because of their impact on the perception of crime in the area and the buyer's concern for personal safety or property damage. Our analysis only includes shootings which have taken placce in 2023, we focus on shootings in 2023 because recent shootings are likely to be the primary driver of current perceptions of crime. 
+
+The shootings data was also obtained through Open Data Philly, the data on shootings is part of a larger crime database which the city of Philadelphia stores on Carto.
 
 ```{r homicides data, results = "hide"}
 shootings_url <- "https://phl.carto.com/api/v2/sql?q=SELECT+*+FROM+shootings&filename=shootings&format=geojson&skipfields=cartodb_id"
@@ -298,7 +305,7 @@ HDBind <- rbind(NotRDAs, HDJoinRDAs)
 
 HDFinal_alldata <- st_intersection(HDBind, acsTractsPHL.2021) 
 
-HD_Final <- HDFinal_alldata %>%
+HDFinal <- HDFinal_alldata %>%
   dplyr::filter(toPredict == "MODELLING")
                            
 
@@ -476,7 +483,9 @@ Philly.test %>%
 
 ## Cross Validation
 
-Needs explanation here 
+Our analysis so far, has focused on a single training and test dataset. In order to cross validate the model and assess its generalizability to new data it is necessary to run the model multiple time using different training data. This analysis uses a process called K-Fold Cross Validation - this method involves splitting the data into 100 different training datasets. In each training dataset has a different set of home sales data points are excluded from the model and these excluded points are used to test the model error.
+
+The scatter plot below shows a histogram of the Mean Absolute Error (MAE) for all 100 of the analyses. The MAE varies between 62,500 Dollars and 100,00 Dollars. The distribution of the Mean Absolute Errors has an approximate normal distribution, and peaks at 75,000 USD. Despite being somewhat inaccurate, the indicates the model is generalizable and provides consistent results when using different training data. 
 
 ```{r cross_validation}
 
@@ -493,7 +502,7 @@ reg.cv <-
 
 ggplot(reg.cv$resample, aes(x=MAE)) + 
   geom_histogram(color='white',fill="orange",bins=100)+
-  scale_x_continuous(labels = comma,limits=c(0,150000))+
+  scale_x_continuous(labels = comma,limits=c(0,150000),breaks=c(25000,50000,75000,100000,125000,150000))+
   scale_y_continuous(breaks=c(0,2,4,6,8,10))
 
 ```
@@ -538,16 +547,12 @@ ggplot()+
   mapTheme()
 
 ```
-
-## Nearest Neighbors
-
-A Nearest Neighbor analysis is  our way of  identifying the distribution of points in a given space, whether by measuring distance or a specific value. For our analysis, we can use Nearest Neighbor values to additionally predict sale prices, as neighboring homes would tend to feature the same attributes as one another, therefore, can have a similar price range. 
   
-## Residual Scatterplot (relook at)
+## Spatial Lag Analysis
 
-Spatial Lag is the concept that depicts the relationship between the variables we are interested in and having that in a neighborhood context. The Spatial Lag is used to learnt the effect of how nearby house prices can change a house. The lag error is the error the values "neighbors" that surround said value. 
+Based on the map of the residuals above, we can observe that there appears to be some spatial clustering in the residuals. Next we check, if there is similarity between our predicted values and predicated values of surrounding homes. To check this, we use a spatial lag calculation - spatial lag is the weighted sum of the values neighboring a locations. 
 
-The scatterplot below shows a postive correlation because of negative values seen by the points outside the cluster, where it underestimates houses of extremely high values, while only a few, the outliers underestimate certain houses by $1 million dolalrs or more. What we can conclude from this graph is the model is going to have a more difficult time predicting home prices for houses with higher sale prices. 
+The scatter plot below compares the sales price error for each home in our model to the spatial lag error for sales price - our spatial lag error is calculated based on the average error of the five nearest neighbors. The points in the scatter plot are clustered, this indicates that our model generally predicts similar error for a home and the five homes which surround it. The blue line shows the regression line.
 
 
 ```{r Spatial Lag, results = "hide", message=FALSE}
@@ -562,7 +567,9 @@ Philly.test %>%
   ggplot()+
   geom_point(aes(x =lagPriceError, y =sale_price.Error))+
   stat_smooth(aes(lagPriceError, sale_price.Error), 
-             method = "lm", se = FALSE, size = 1, colour="blue")  
+             method = "lm", se = FALSE, size = 1, colour="blue")+
+  xlim(-1000000,1000000)+
+  ylim(-1000000,1000000)+
   plotTheme()
 ```
 # Morans I
