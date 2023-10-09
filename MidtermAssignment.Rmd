@@ -619,18 +619,6 @@ HDFinal_alldata <- HDFinal_alldata %>%
 
 ```
 
-
-
-```{r kable table}
-Philly.test %>%
-as.data.frame() %>%
-  group_by(DIST_NAME) %>%
-    summarize(meanPrediction = mean(sale_price.Predict),
-              meanPrice = mean(sale_price)) %>%
-      kable() %>% 
-  kable_styling()
-```
-
 # Spatial Pattern of Regression by Neirbodhood (reword for one map)
 
 Regardless of the model's overall accuracy and its ability to predict house prices. We can highlight the model's weaknesses per neighborhood and understand which areas it will over or underestimate. One of the biggest highlights that come from the map is that the model's largest errors are in the lower income suburban sections of the city. We can conclude the model is less accurate in less desired neighborhoods. 
@@ -652,20 +640,21 @@ st_drop_geometry(Philly.test) %>%
 ```
 # Provide a scatterplot plot of MAPE by neighborhood as a function of mean price by neighborhood.
 
-Explain scatterlot
+The scatter plot below shows the relationship between 
 
 ```{r MAPE Scatter Plot}
 
 st_drop_geometry(Philly.test) %>%
   group_by(Regression, DIST_NAME) %>%
-  summarize(mean.MAPE = mean(sale_price.APE, na.rm = T), 
+  summarize(mean.MAPE = abs(mean(sale_price.APE, na.rm = T)), 
             mean.sale_price = mean(sale_price, na.rm = T)) %>%
   ungroup() %>% 
   left_join(planning_districts) %>% 
   ggplot() +
   geom_point(aes(x =mean.sale_price, y =mean.MAPE, color=DIST_NAME))+
   stat_smooth(aes(mean.sale_price, mean.MAPE), 
-             method = "lm", se = FALSE, size = .5, colour="red")  
+             method = "lm", se = FALSE, size = .5, colour="red")+
+  scale_y_continuous(labels = scales::percent)+
   plotTheme()
 
 ```
