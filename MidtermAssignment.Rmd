@@ -399,6 +399,7 @@ mapTheme()
 ## Heat Map of Shootings
 
 We depicted where all shootings have occurred and created a heat map that shows the "hot spot" of where shootings most often occur. Similarly to seeing the education ratings & government assistance, we notice crime is clustered just north of the city center and we it has residual spillover in areas north of said cluster. Central City and areas south of the largest hot spot appear spared from gun violence. 
+
 ```{r Interesting Maps Part 3}
 ggplot()+
   geom_sf(data=planning_districts,fill='grey80',color='transparent')+
@@ -416,6 +417,7 @@ ggplot()+
 # "Something Engaging" Interactive Map of Houseowner-Occupied Rate
 
 Provided below is an map that depicts where the Homeowner occupies the house they reside in, deferring from places where people rent. If you hover above the tract, you'll see the exact rate of home ownership in the area. Other tools are available on the top right of the map. 
+
 ```{r Actually something engaging}
 ggplotly(
   ggplot(acsTractsPHL.2021)+
@@ -429,6 +431,7 @@ ggplotly(
 ## Table of Results (Training)
 
 We have decided on a filtered list of key dependent variables to use to predict home values. Those factors being the following: shootings within 1/2 mile, interior condition, total livable area, neighborhood name, trees in the area, median household income,  exterior condition, if there is a fireplace, white homeownership rate, assisted income rate, restaurants per square mile, and the number of bathrooms.  
+
 ```{r Training and Test Set}
 inTrain <- createDataPartition(
               y = paste(HDFinal$DIST_NAME), 
@@ -473,6 +476,8 @@ Philly.test %>%
 
 ## Cross Validation
 
+Needs explanation here 
+
 ```{r cross_validation}
 
 fitControl <- trainControl(method = "cv", number = 100)
@@ -493,6 +498,8 @@ ggplot(reg.cv$resample, aes(x=MAE)) +
 
 ```
 ## Plot Predicted Prices
+
+Explanation needed
 
 ```{r, results = "hide", message=FALSE}
 
@@ -517,6 +524,7 @@ A Nearest Neighbor analysis is  our way of  identifying the distribution of poin
 
 ## Residual Map with Moran's I
 
+explanation of map (code explanation is above, add on)
 
 ```{r Resdiuals Map of Test Set, results="hide", message=FALSE}
 
@@ -534,6 +542,8 @@ ggplot()+
   mapTheme()
 
 ```
+
+## Residual Scatterplot (relook at)
 
 Spatial Lag is the concept that depicts the relationship between the variables we are interested in and having that in a neighborhood context. The Spatial Lag is used to learnt the effect of how nearby house prices can change a house. The lag error is the error the values "neighbors" that surround said value. 
 
@@ -556,6 +566,7 @@ Philly.test %>%
   plotTheme()
 ```
 # Morans I
+
 Moran's I is a measurement in statistics that evaluates the tendency for data points with similar values to occur near one another. Similar to Nearest Neighbor to statistically prove that houses spatially close to each other would have similar sale prices. This type of measurement helps us identify high and low value clusters (i.e different neighborhoods and their perceived value). 
 
 In the graph below see a thin distribution in gray, those are the counts of houses and their sale prices we provided the regression model. The orange line represents the Moran's I value, determining if there is any correlation between value and location. The observed Moran's I is roughly 0.2, which is considered statistically significant and suggests that the spatial distribution  is correlated. 
@@ -576,6 +587,8 @@ ggplot(as.data.frame(moranTest$res[c(1:999)]), aes(moranTest$res[c(1:999)])) +
   plotTheme()
 ```
 # Predicted values for where ‘toPredict’ is both “MODELLING” and “CHALLENGE”.
+
+Explain map 
 
 ```{r}
 
@@ -625,7 +638,9 @@ st_drop_geometry(Philly.test) %>%
       mapTheme()
 
 ```
-# MISSING - Provide a scatterplot plot of MAPE by neighborhood as a function of mean price by neighborhood.
+# Provide a scatterplot plot of MAPE by neighborhood as a function of mean price by neighborhood.
+
+Explain scatterlot
 
 ```{r MAPE Scatter Plot}
 
@@ -683,7 +698,7 @@ st_join(Philly.test, acsTractsPHL.2021) %>%
 ```
 
 
-# Accuracy  & Generalizability 
+# Accuracy  & Generalizability (look at it)
 
 Is it accurate but not generalizable as there were specific metrics used for Philadelphia. Any scalability for other cities would require research on their school systems, crime statistics, and other external sources. For accuracy, the primary factor involved is the quality and quantity of data. More data leads to more accurate predictors but in terms of efficiency, quality data that pinpoints crucial values in home price can streamline model training. For the generalization of the model, the model can be generalized for the Philadelphia region alone. Adding data from anywhere outside the region would be inaccurate due to the unfamiliarity of the local context and sets of new data that would be required. 
 
