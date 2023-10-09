@@ -15,7 +15,7 @@ editor_options:
 
 ## Introduction
 
-In response to the growing demand by Zillow for a housing market model that incorporates local context, we have been tasked with leverage data from multiple sources, including Philadelphia Open Data and the American Community Survey data from U.S Census Bureauto gather comprehensive information that enables us to develop an accurate and reliable model for sales prices in the Philadelphia housing market. 
+In response to the growing demand by Zillow for a housing market model that incorporates local context, we have been tasked with leverage data from multiple sources, including Philadelphia Open Data and the American Community Survey data from U.S Census Bureau to gather comprehensive information that enables us to develop an accurate and reliable model for sales prices in the Philadelphia housing market. 
 
 This report outlines our approach and methods and the importance of understand the local context that is integrated with pre-existing data. We aim to provide greater context and a precise understanding of Philadelphia's housing scene for present and future use. 
 
@@ -40,6 +40,7 @@ library(broom.mixed) # needed for effects plots
 library(tidycensus)
 library(ggplot2)
 library(sp)
+library(scales)
 library(ggiraph)
 library(plotly)
 library(stargazer)
@@ -506,8 +507,8 @@ Philly.test %>%
        subtitle="Orange line represents a perfect prediction; Green line represents prediction") +
   scale_x_continuous(labels = comma)+
   plotTheme()
-
 ```
+
 
 # Nearest Neighbor - WHAT is this - not sure we need it?
 
