@@ -96,7 +96,7 @@ After a through review - we selected the following data from ACS for potential i
 
 * **White Home Ownership Rate**: Calculated at the Number of Homes where the home owner is white divided by the total housing units in the census tract. This variable gives our model a racial element. Race unfortunately continues to be an important predictor of home values in Philadelphia due the lasting impacts of redlining. We included White Home Ownership in our model because we hypthosize that home values will be higher in areas where the majority of home owners are white. 
 
-* **Median Household Income**: Median income levels can be an important predictor of home sales prices. We hypthosize that areas where median income levels are high are also likely to have high home sales values.  
+* **Median Household Income**: Median income levels can be an important predictor of home sales prices. We hypothesize that areas where median income levels are high are also likely to have high home sales values.  
 
 * **Percent of Households with Public Assistance Income**: Households receiving public assistance income are likely financial strained. We hypothesize that areas where a large number of households receive public assistance are likely to have lower home sales values. 
 
@@ -518,13 +518,9 @@ Philly.test %>%
 ```
 
 
-# Nearest Neighbor & Moran's I
+# Spatial Pattern of Errors
 
-A Nearest Neighbor analysis is  our way of  identifying the distribution of points in a given space, whether by measuring distance or a specific value. For our analysis, we can use Nearest Neighbor values to additionally predict sale prices, as neighboring homes would tend to feature the same attributes as one another, therefore, can have a similar price range. 
-
-## Residual Map with Moran's I
-
-explanation of map (code explanation is above, add on)
+## Map of Residual Errors 
 
 ```{r Resdiuals Map of Test Set, results="hide", message=FALSE}
 
@@ -543,6 +539,10 @@ ggplot()+
 
 ```
 
+## Nearest Neighbors
+
+A Nearest Neighbor analysis is  our way of  identifying the distribution of points in a given space, whether by measuring distance or a specific value. For our analysis, we can use Nearest Neighbor values to additionally predict sale prices, as neighboring homes would tend to feature the same attributes as one another, therefore, can have a similar price range. 
+  
 ## Residual Scatterplot (relook at)
 
 Spatial Lag is the concept that depicts the relationship between the variables we are interested in and having that in a neighborhood context. The Spatial Lag is used to learnt the effect of how nearby house prices can change a house. The lag error is the error the values "neighbors" that surround said value. 
