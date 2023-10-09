@@ -298,7 +298,7 @@ HDBind <- rbind(NotRDAs, HDJoinRDAs)
 
 HDFinal_alldata <- st_intersection(HDBind, acsTractsPHL.2021) 
 
-HD_Final <- HDFinal_alldata %>%
+HDFinal <- HDFinal_alldata %>%
   dplyr::filter(toPredict == "MODELLING")
                            
 
@@ -499,7 +499,7 @@ ggplot(reg.cv$resample, aes(x=MAE)) +
 ```
 ## Plot Predicted Prices
 
-Explanation needed
+The graph below depicts the difference between our predictive model and "perfect predictions", defined as 100% accuracy. For the vast majority of clusters our model is quite accurate and coincides with the line of perfection. However, as there are fewer and higher priced houses, such as the ones over 2 million, the model becomes skewed to underestimate their value. The other limitations to the model include the negative results, there are multiple points that are below the (0,0) mark which indicate the model assumed a negative value on a home regardless of the fact the actual sales price was a positive integer. Regardless, the model happens to slightly overestimate these home values, as seen by the model prediction line (green) over the line of perfection. One could use such data as an indicator of a "fixer-upper", houses that require large amount of maintenance or abysmal conditions that it would cost more to repair it than to purchase. 
 
 ```{r, results = "hide", message=FALSE}
 
@@ -509,11 +509,12 @@ Philly.test %>%
   geom_point() +
   stat_smooth(aes(sale_price, sale_price), 
              method = "lm", se = FALSE, size = 1, colour="#FA7800") + 
-  stat_smooth(aes(sale_price.Predict, sale_price), 
+  stat_smooth(aes(sale_price, sale_price.Predict), 
               method = "lm", se = FALSE, size = 1, colour="#25CB10") +
   labs(title="Predicted sale price as a function of observed price",
        subtitle="Orange line represents a perfect prediction; Green line represents prediction") +
   scale_x_continuous(labels = comma)+
+  scale_y_continuous(labels = comma)+
   plotTheme()
 ```
 
@@ -521,6 +522,8 @@ Philly.test %>%
 # Spatial Pattern of Errors
 
 ## Map of Residual Errors 
+
+The map below shows the absolute margin of error in each prediction for the sales price. The majority of errors were off by no more than +-$50,000. There are notable patches that have greater errors, especially in the northeast where wealthier homes are, emphasizing the evident underestimate of high value homes.
 
 ```{r Resdiuals Map of Test Set, results="hide", message=FALSE}
 
@@ -567,7 +570,7 @@ Philly.test %>%
 ```
 # Morans I
 
-Moran's I is a measurement in statistics that evaluates the tendency for data points with similar values to occur near one another. Similar to Nearest Neighbor to statistically prove that houses spatially close to each other would have similar sale prices. This type of measurement helps us identify high and low value clusters (i.e different neighborhoods and their perceived value). 
+Moran's I is a measurement in statistics that evaluates the tendency for data points with similar values to occur near one another. Similar to Nearest Neighbor, to statistically prove that houses spatially close to each other would have similar sale prices. This type of measurement helps us identify high and low value clusters (i.e different neighborhoods and their perceived value). 
 
 In the graph below see a thin distribution in gray, those are the counts of houses and their sale prices we provided the regression model. The orange line represents the Moran's I value, determining if there is any correlation between value and location. The observed Moran's I is roughly 0.2, which is considered statistically significant and suggests that the spatial distribution  is correlated. 
 
@@ -588,7 +591,9 @@ ggplot(as.data.frame(moranTest$res[c(1:999)]), aes(moranTest$res[c(1:999)])) +
 ```
 # Predicted values for where ‘toPredict’ is both “MODELLING” and “CHALLENGE”.
 
-Explain map 
+We needed to compare how our modelling data against the "challenge" dataset, the specific houses we needed to predict. The modelling map shows the houses we used to teach the model how to predict different sales prices, even if it has a pre-existing sales price. The model then starts to predict values from the modelling data, and the results are shown below. For the "challenge" dataset, the model did not have any sales price to reference, and now we see the resulting predicted sales price for such. 
+
+Comparing the maps to each other, the challenge houses reflects the modelling sets through what would otherwise be the entire neighborhood. This parallel between the two maps prove that the challenge set is consistent with the predicted house prices used in the model and therefore can reasonably predict home values without the need of any previous sale price. 
 
 ```{r}
 
@@ -621,12 +626,12 @@ as.data.frame() %>%
 
 # Spatial Pattern of Regression by Neirbodhood (reword for one map)
 
-We can continue to see that there is a correlation between neighborhoods categories and a home's sale price. This spatial autocorrelation is defined by these two maps that show the difference the neighborhood effect has on predictions. When depicted by district, the map  informed us that the baseline model becomes less reliable in the north central area, specifically where there is the lowest values in housing as seen in prior figures. 
+Regardless of the model's overall accuracy and its ability to predict house prices. We can highlight the model's weaknesses per neighborhood and understand which areas it will over or underestimate. One of the biggest highlights that come from the map is that the model's largest errors are in the lower income suburban sections of the city. We can conclude the model is less accurate in less desired neighborhoods. 
 
 ```{r}
 st_drop_geometry(Philly.test) %>%
   group_by(Regression, DIST_NAME) %>%
-  summarize(mean.MAPE = mean(sale_price.APE, na.rm = T)) %>%
+  summarize(mean.MAPE = abs(mean(sale_price.APE, na.rm = T))) %>%
   ungroup() %>% 
   left_join(planning_districts) %>%
     st_sf() %>%
