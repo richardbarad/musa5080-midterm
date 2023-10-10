@@ -15,9 +15,9 @@ editor_options:
 
 # Introduction
 
-In response to the growing demand by Zillow for a housing market model that incorporates local context, we have been tasked with trying to create an improved model with greater precision and generalizability. In order to try to accomplish this task we develop an Ordinary Leased Squared (OLS) Linear regression model using data from multiple sources. Our model relies on a combination of data on the internal characteristics of a home - the data on internal characteristics of homes was provided to us by the client. Additionally, we incorporate external data from multiple sources including Philadelphia Open Data and the American Community Survey data from U.S Census Bureau to gather comprehensive information in order to try to create an accurate and generalizable model for home sales prices in the Philadelphia housing market. 
+In response to the growing demand by Zillow for a housing market model that incorporates local context, we have been tasked with trying to create an improved model with greater precision and generalizability for predicting home sale prices. In order to accomplish this task we developed an Ordinary Leased Squared (OLS) Linear regression model using data from multiple sources. Our model relies on a combination of data on the internal characteristics of a home - provided to us by the client, additionally, we incorporate external data including Philadelphia Open Data and the American Community Survey data from U.S Census Bureau to gather comprehensive information in order to try to create an accurate and generalizable model for home sales prices in the Philadelphia housing market. 
 
-This report outlines our approach and methods and the importance of understanding the local context alongside internal characteristics. Our model, is far from perfect but we hope it will provide a good starting point for future home sales modelling work in the Philadelphia housing market. 
+This report outlines our approach and methods and the importance of understanding the local context alongside internal characteristics. Our model is far from perfect, but we believe it will provide us the insight necessary to reflect an accurate depiction of what homebuyers value and how their preferences reflect the evolving housing market. 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
@@ -49,16 +49,16 @@ source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-L
 
 # Load House Sales Data from Github
 
-We start by importing the home sales data set which was provided to us for our study. This dataset includes key information on internal home characteristics, such as number of bathrooms, number of stories, total livable area, exterior home condition, and interior home condition. The provided dataset includes 23,881 data points of which 23,779 have sales price data and can be used to help develop the home sales prediction model. We carefully reviewed the data to identify which internal home characteristics can be used in home sales price model. Some home attributes like the presence of central air are incomplete and contain a significant number of blank/no data values which prevent us from using them in our model. 
+We start by importing the home sales data already provided to us for our study. This dataset includes key information on internal home characteristics, such as number of bathrooms, number of stories, total livable area, exterior home condition, and interior home condition. The provided dataset includes 23,881 data points of which 23,779 have sales price data that can be used to develop the home sales prediction model. We carefully reviewed the data to identify which internal home characteristics can be used in home sales price model. Some home attributes like the presence of central air are incomplete and contain a significant number of blank/no data values which prevent us from using them in our model. While that was not the only attribute that had incomplete data, we found 102 homes in the dataset to have insufficient data that could not be estimated, and therefore had to be excluded from the model. 
 
-Other variables, required cleaning and usage of assumptions to ensure data completeness. The assumptions which we use to replace unknown values are outlined below:
+Some variables required cleaning and usage of deductive reasoning to ensure data completeness. The logic which we use to replace unknown values are outlined below:
 
 * 3,679 homes are listed as having zero bathrooms or did not have data on the number of bathrooms. It is assumed these homes contained one bathroom.
 * 21 homes do not have data on interior condition - an assumption is made that these homes had an average interior condition.  
 * 1 home does not have data on exterior condition - an assumption is made that this home had an average interior condition
 * 208 homes do not have data on the number of fireplaces - an assumption is made that these homes do not have a fireplace, this assumption is based on the provided metadata which indicates that homes with no fireplaces were left blank. 
 
-These usage of assumptions is necessary in order to ensure that every home in the home sales dataset can be utilized in the model.
+The usage of estimated attributes for these points were necessary in order to ensure that as many homes possible in the dataset can be utilized in the model. As a result, 99.57% of the house data provided to us was fit for model training. 
 
 ```{r read_github_data, results = "hide", message=FALSE, warning=FALSE}
 house_data <- st_read("https://raw.githubusercontent.com/mafichman/musa_5080_2023/main/Midterm/data/2023/studentData.geojson") %>%
@@ -85,11 +85,11 @@ house_data <- house_data %>%
 
 # Get Other Data
 
-In order to develop an enhanced home sales prediction model, we acquire data that looks beyond the internal characteristics of a home. We gather data on the external characteristics of the area surrounding a home including the houses proximity to key amenities like urban corridors, superior public schools, restaurants, and green space. These external home characteristics are likely to influence price. We also include data on the economic and racial demographics of the geographic area each home is located in.
+In order to develop an enhanced home sales prediction model, we acquire data that looks beyond the internal characteristics of a home. We gather data on the external characteristics of the neighborhood surrounding a home including the house's proximity to key amenities, like urban corridors, public schools, restaurants, and green space. These external characteristics are likely to influence price. We also found that a home price goes beyond the physical characteristics but socioeconomic too, meaning we had to investigate the social demographics and economics of areas and see if that can change how the model thinks.
 
 ## Census Data
 
-The first source use is data from the U.S Census Bureau, specifically the American Community Survey (ACS). We use data from the 2021 five year ACS, which is the most recent five year ACS data available. We leverage Social Explorer - a website which makes ACS data table variables more accessible to help identify variables which we hypothesize would likely correlate with home sales price. After a through review - we selected the following data from ACS for potential inclusion in our housing sales price model. 
+The first source used is data from the U.S Census Bureau, specifically the American Community Survey (ACS). We use data from the 2021 five year survey, which is the most recent year and uses data over a 5-year timespan. We also leveraged Social Explorer - a website which makes ACS data more accessible and easier to identify variables which we hypothesize which would likely correlate with home sales price. After a thorough review - we selected the following data from ACS for potential inclusion in our housing sales price model. 
 
 * **White Home Ownership Rate**: Calculated as the Number of Homes where the home owner is white divided by the total housing units in the census tract. This variable gives our model a racial element. Race unfortunately continues to correlate with home sales prices in Philadelphia due to the legacy of redlining. We include the white home ownership as a potential predictor of sales prices because we hypothesize that home values will likely be higher in areas where the majority of home owners are white. 
 
@@ -154,13 +154,13 @@ acsTractsPHL.2021 <- acsTractsPHL.2021 %>%
 
 Open Data Philly is an open source website that provides a catalog of free data, which is endorsed by the City of Philadelphia. The platform includes datasets provided by the city and other partner organizations. We utilize data from Open Data Philly to help categorize, describe, and develop a profile for key geographic characteristics which might impact home sale prices.
 
-The code below downloads the following datasets:
+The following datasets extracted are provided below: 
 
-* [Planning Districts](https://opendataphilly.org/datasets/planning-districts/) - this analysis will use planning districts will be used as a proxy for neighborhoods.
+* [Planning Districts](https://opendataphilly.org/datasets/planning-districts/) - this analysis will use planning districts will be used as a substitute for neighborhoods.
 
-* [Redevelopment Areas](https://opendataphilly.org/datasets/redevelopment-certified-areas/) - this dataset provides information on blighted areas, blighted areas are defined by the city as "meeting one of seven city mandated criteria, including unsafe, unsanitary and inadequate conditions; economically or socially undesirable land use; and faulty street and lot layout". We hypthoszied that prices are likely to be lower in blighted areas.
+* [Redevelopment Areas](https://opendataphilly.org/datasets/redevelopment-certified-areas/) - this dataset provides information on blighted areas, blighted areas are defined by the city as "meeting one of seven city mandated criteria, including unsafe, unsanitary and inadequate conditions; economically or socially undesirable land use; and faulty street and lot layout". We hypothesized that prices are likely to be lower in blighted areas.
 
-* [Total Restaurants](https://opendataphilly.org/datasets/neighborhood-food-retail/) - this dataset includes information on the number of restaurants per census block. The dataset was created from the Neighborhood Food Retail in Philadelphia report. We included this dataset as a potential prodictor of home sales prices because we hypothesized that areas with more restaurants are likely to have higher home sales price values. 
+* [Total Restaurants](https://opendataphilly.org/datasets/neighborhood-food-retail/) - this dataset includes information on the number of restaurants per census block. The dataset was created from the Neighborhood Food Retail in Philadelphia Report. Restaurants acts as a potential predictor of home sales prices because we hypothesized that areas with more restaurants are likely to have higher home sales price values. 
 
 ```{r get open_phily_data, results = "hide", warning=FALSE}
 planning_districts <- st_read("https://opendata.arcgis.com/datasets/0960ea0f38f44146bb562f2b212075aa_0.geojson")%>%
