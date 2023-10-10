@@ -181,11 +181,11 @@ restaurants <- restaurants %>%
 
 ## Load School Test Score Data
 
-The proximity to the best public schools is another key characteristic of a desirable neighborhood. We use data on student performance on the [PSSA/Keystone](https://www.philasd.org/performance/programsservices/open-data/pssakeystone/) test to help provide an understanding of school performance. PSSA/Keystone includes three sections: Science, Math, and English Language Arts. Students in Grades 3-8 complete this test, and each student receives a score of "Below Basic", "Basic", "Proficient" or "Advanced" on each section. Our analysis uses the percent of students who scored "Advanced" or "Proficient" at each school as a potential model input. 
+The proximity to the best public schools is another key characteristic of a desirable neighborhood. We use data on student performance on the [PSSA/Keystone](https://www.philasd.org/performance/programsservices/open-data/pssakeystone/) test to help provide an understanding of school performance. PSSA/Keystone includes three sections: Science, Math, and English Language Arts. Students in Grades 3-8 complete this test and each student receives a score of "Below Basic", "Basic", "Proficient" or "Advanced" on each section. Our analysis uses the percent of students who scored "Advanced" or "Proficient" at each school indicating the school's overall quality.  
 
 In order to get one value to input into our model, the percentage values on the three sections are averaged together get a single number for each school. As an example, if School A had 20 percent of students score proficient or advanced in math, 25 percent score proficient or advanced in sciences, and 35 percent scored proficient or advanced in English. A value of 26.66 percent would be calculated as the net performance across all three sections for School A, 26.66 is equal to the average of 20, 25, and 35 percent.
 
-We use an assumption that residents using public schools are likely to send their children to the public school which is closest to their home. Thus, each home included in the model is assigned the test score of the closest school to the home.
+One limitation is our assumption that residents using public schools are likely to send their children to the public school which is closest to their home. Thus, each home included in the model is assigned the test score of the closest school to the home. Schools that are near "planning district" borders may not reflect nearby homes that affiliate with that school and are classified as a different neighborhood.
 
 ```{r school_data, cache=FALSE, results = "hide", message=FALSE}
 school_test_data <- read.csv('Data\\Schools\\2022 PSSA Keystone Actual (School_S).csv')
@@ -213,9 +213,9 @@ schools <- schools %>%
 
 ## Get Data on number of Trees from Open Data Philly
 
-Trees help provide environmental benefits and shade. Residents may place value on having greenness in their neighborhood. We consider including the number of trees in the area surrounding the home in our model because we hypothesize that greener areas with more trees are likely to have higher home sales values. 
+Trees help provide environmental benefits and shade. Residents may place value on having greenness in their neighborhood and tress indicate community care for a neighborhood. We consider including the number of trees in the area surrounding the home in our model because we believe that greener areas with more trees are likely to have higher home sales values. 
 
-Open Data Philly includes a data layer showing all trees in Philadelphia. We calculate the number of trees per square mile in each census tract and includ this as a potential input in our home sales price model.
+Open Data Philly includes a data layer showing all trees in Philadelphia. We calculate the number of trees per square mile in each census tract and include this as a potential input in our home sales price model.
 
 ``` {r get_process_tree_data, results = "hide", message=FALSE, warning=FALSE}
 #Get Data on trees in Philadelphia
@@ -233,7 +233,7 @@ acsTractsPHL.2021 <- st_intersection(acsTractsPHL.2021, trees) %>% #Determine wh
 
 ## Urban Corridors
 
-Open Data Philly includes a dataset on urban corridors. We calculate the distance from each home in our home sales dataset to the nearest urban corridor. Living near an urban corridor increases proximity to amenities like restaurants, decreases transportation costs, and improves access to grocery stores. We hypothesize that living near an urban corridor should raise home values. However, there could be exceptions to this pattern. Residents living in car-dependent neighborhoods on the outskirts of the city may prefer to be away from corridors, preferring quietness and privacy over proximity to urban corridors. This may result in distance to urban corridors having a non-linear correlation with sales price which may impact the usability of this variable in our model. 
+Open Data Philly includes a dataset on urban corridors. We calculate the distance from each home in our home sales dataset to the nearest urban corridor. Living near an urban corridor increases proximity to amenities like restaurants, decreases transportation costs, and improves access to grocery stores. We hypothesize that living near an urban corridor should raise home values. However, there could be exceptions to this pattern. Residents living in car-dependent neighborhoods on the outskirts of the city may prefer to be away from corridors, preferring quietness and privacy over proximity to urban corridors. Because of Philadelphia's mix between urban-city and suburbia, the correlation in the model may become inconclusive or have a bias towards one type of environment (urban or suburban).
 
 ```{r corridors data, results = "hide", message=FALSE, warning=FALSE}
 corridors_url <- "https://opendata.arcgis.com/datasets/f43e5f92d34e41249e7a11f269792d11_0.geojson"
@@ -277,7 +277,7 @@ house_data <- st_intersection(shootings,st_buffer(house_data,2640/2)) %>%
 
 ## Join All Data to House Sales Data
 
-After gathering data from various sources, we now have to coalesce them into one final database for our prediction model. 
+After gathering data from various sources, we now have to coalesce all the data into one final database for our prediction model. 
 
 ```{r Joining All Tables}
 HDJoin <- st_intersection(house_data, restaurants %>%
@@ -300,7 +300,7 @@ HDFinal_alldata <- st_intersection(HDBind, acsTractsPHL.2021)
 
 ## Split Data
 
-From the consolidated database we select just the homes where the 'toPredict' column is equal to MODELLING. Thes selected 23,779 rows contain the home data which will be used in our model development. 
+From the consolidated database we select just the homes where the 'toPredict' column is equal to MODELLING. The selected 23,779 rows contain the home data which will be used in our model development. 
 
 ```{r split_data}
 HDFinal <- HDFinal_alldata %>%
@@ -309,7 +309,7 @@ HDFinal <- HDFinal_alldata %>%
 
 # Data Exploration
 
-Next we explore our data, exploring the data helps us identify which of the variables correlate with price and are best suited for inclusion in our model.
+Next we explore our data, exploring the data identifies which of the variables correlate with price and are best suited for inclusion in our model. 
 
 ## Summary Statistics 
 
@@ -328,9 +328,9 @@ stargazer(HDFinal_nongeom, type = 'text', title= "Table 1: Summary Statistics")
 
 A correlation matrix compares factors against one another to see how related they are. Each box presented below indicates whether there is a correlation (positive or negative) or little relationship between two variables. A correlation near one indicates a strong positive correlation, a correlation near -1 indicates a strong negative correlation, a correlation near 0 indicates no linear relationship between two variables. 
 
-The correlation matrix shows strong correlation between many factors. A review of 'sales_price' column matrix allows us to identify which variables have the strongest correlation with sales prices. We can observe that the variables Assited Income Rate (AssitedIncRate), shootings within a half mile (shooting_halfmile), median income, and interior condition are negatively correlated with rent. Conversely, the tree count, number of bathrooms, number of fireplaces, and total livable area have a positive correlation with sales price. 
+The correlation matrix shows strong correlation between many factors. A review of 'sales_price' column matrix allows us to identify which variables have the strongest correlation with sales prices. We can observe that the variables Assisted Income Rate (AssistedIncRate), shootings within a half mile (shooting_halfmile), and interior condition are negatively correlated with rent. Conversely, the tree count, number of bathrooms, number of fireplaces, and total livable area have a positive correlation with sales price. Almost all variables have a measurement of correlation, but in order to prevent redundancy or overlap in indicators, we are looking for variables that are distinct and have a strong correlation with sale price. 
 
-We choose to include in our model variables where the absolute value of the correlation is 0.3 or higher. 
+We choose to include in our model variables where the absolute value of the correlation is +-0.3 or higher. 
 
 ```{r correlation_matrix, fig.width=12, fig.height=12, message=FALSE}
 HDFinal_nongeom %>% 
@@ -360,11 +360,11 @@ HDFinal_nongeom %>%
 
 ## Maps
 
-This section of the reports includes maps of dependant variable (home sales prices) and five independant variables.
+This section of the reports includes maps of dependent variable (home sales prices) and five independent variables.
 
 ### Home Prices 
 
-This map explores the variation in 2021 home prices across Philadelphia. We observe that the most expensive areas are located near Center City or in areas in Northeast Philadelphia (e.g.Chestnut Hill) and Northwest Philadelphia (e.g. Parkwood). We notice a ring-like effect in the city where the most expensive areas are either in the core center or furthest away where there is the least interaction with the city. The areas with the lowest home sales prices are located just North of Center City and in West Philadelphia. 
+This map explores the variation in 2021 home prices across Philadelphia. We observe that the most expensive areas are located near Center City or in areas in Northeast Philadelphia (e.g.Chestnut Hill) and Northwest Philadelphia (e.g. Parkwood). We notice a ring-like effect in the city where the most expensive areas are either in the core center or furthest away where there is the least interaction the urban center. The areas with the lowest home sales prices are located just North of Center City and West Philadelphia. 
 
 ```{r Map of Home Prices, results = "hide"}
 HDFinal <- HDFinal %>% 
@@ -385,7 +385,7 @@ ggplot()+
 
 ### Assisted Income Levels
 
-This map shows the rate of people requiring assisted income in the city. We can observe that the central northeast, areas such as Kensington, Fairhill, and Feltonville are most reliant on government assistance for income. These areas are shown in yellow and green in the map. Many of the areas surrounding these neighborhoods are also affected by the poverty and have a high reliance on government assistance for income. 
+This map shows the rate of people requiring assisted income in the city. We can observe that the central northeast, areas such as Kensington, Fairhill, and Feltonville are most reliant on government assistance for income. These areas happen to be yellow and green in the map. Many of the areas surrounding these neighborhoods are also affected by the poverty and have a high reliance on government assistance for income, showing the aura that the impoverished area emits onto its adjacent areas. 
 
 Comparing this map to our home sales map identifies clear spatial patterns. Specifically neighborhoods that have a high reliance on assistance for income also have lower home sales prices.   
  
@@ -400,7 +400,7 @@ mapTheme()
 
 ### Standardized Test Performance 
 
-The school system in a neighborhood can be a deal-breaker factor for families seeking a home in an area. The Keystone Exam is the State's index of evaluating school performance and student's education quality. The map below shows which schools have the best performance on this exam. According to the Keystone exam, the best schools are located in Northeast and Northwest Philadelphia and some parts of South Philadelphia.  
+The school system in a neighborhood can be a deal-breaker factor for families seeking a home in an area. The Keystone Exam is the State's index of evaluating school performance and student's education quality. The map below shows which schools have the best performance on this exam. According to the Keystone exam, the best schools are located in Northeast and Northwest Philadelphia and some parts of South Philadelphia.   
 
 ```{r Interesting Maps Part 2}
 #profadv is the percentage of students recieved proficient OR advanced scores on Keystore Exam by Penn DOE
@@ -415,7 +415,7 @@ ggplot()+
 
 ### Heat Map of Shootings
 
-We create a heat map that shows the "hot spots" of where shootings occured most frequently in 2023. Similarly to government assistance, we notice crime is clustered just north of the city center and it has residual spillover in areas north of said cluster. High rates of gun violence is also present in parts of West Philadelphia. Central City and areas south of the largest hot spot appear spared from gun violence. 
+We create a heat map that shows the "hot spots" of where shootings occurred most frequently in 2023. Similarly to government assistance, we notice crime is clustered just north of the city center and it has spillover in areas north of said cluster. The same areas that have high assisted income, poor school performance, also have higher rates of crime (specifically gun violence), forecasting the model's interpretation on the home values in these places. 
 
 ```{r Interesting Maps Part 3}
 ggplot()+
@@ -433,7 +433,7 @@ ggplot()+
 
 ### Interactive Map of Houseowner-Occupied Rate
 
-Provided below is an map that depicts where the Homeowner occupies the house they reside in, deferring from places where people rent. If you hover above the tract, you'll see the exact rate of home ownership in the area. Other tools are available on the top right of the map. 
+Provided below is an map that depicts where the Homeowner occupies the house they reside in, deferring from places where people rent. If you hover above the tract, you'll see the exact rate of home ownership in the area. Other tools are available on the top right of the map after hovering over the figure. 
 
 ```{r Actually something engaging}
 ggplotly(
@@ -447,7 +447,7 @@ ggplotly(
 
 # Methods
 
-Our regression analysis will use an Ordinary Least Squares multi-variate linear regression model. This type of model uses multiple independent variables to predict a single dependent variable. In our analysis the dependent variable is sales price. The independent variables which are used to predict sales price are selected based on a review of the summary statistics, correlation matrix, scatter plots, and maps in the data exploration of the report. 
+Our regression analysis will use an Ordinary Least Squares multi-variate linear regression model. As in it uses multiple independent variables to predict a single dependent variable. In our analysis the dependent variable is sales price. The independent variables which are used to predict sales price are selected based on a review of the summary statistics, correlation matrix, scatter plots, and maps in the data exploration of the report. 
 
 The following 13 variables were selected for inclusion in our model:
 
@@ -465,20 +465,20 @@ The following 13 variables were selected for inclusion in our model:
 * **AssistedIncRate:** Proportion of Households Receiving Assisted Income for the census tract the home is located in
 * **rest_per_sqi:** Number of restaurants per square mile in the census block the home is located in.
 
-To develop our model, we use a training a testing approach. The training dataset contains 60 percent of the home sales data while the testing data contains 40 percent of the available data. The training dataset is used to determine the model parameters. After the model parameters are determined, the model is applied to the testing data to make predictions on the unseen data. We then compare our predicated data to the actual sales prices values included in the the testing data to determine the error. We take the absolute value of the error to get an absolute error. Additionally, the absolute percentage error (APE) is calculated by dividing the absolute error by the predicted value. 
+To develop our model, we use a training and testing approach. The training dataset contains 60 percent of the home sales data while the testing data contains 40 percent of the available data. The training dataset is used to determine the model parameters (any numeric factor). After the model parameters are determined, the model is applied to the testing data to make predictions on the unseen data. We then compare our predicated data to the actual sales prices values included in the the testing data to determine the error. We take the absolute value of the error to get an absolute error. Additionally, the absolute percentage error (APE) is calculated by dividing the absolute error by the predicted value. 
 
-Having developed our model, we build in checks to see if our sales price errors are spatially clustered together in space. It is important to check for spatial clustering of errors because the lack of error clustering may indicate that there are spatial patterns in the data which the model is not adequately capturing.
+Having developed our model, we build in checks to see if our sales price errors are spatially clustered together. It is important to check for spatial clustering of errors because the lack of error clustering may indicate that there are location patterns in the data which the model is not adequately capturing.
 
-Additionally, we build in check to assess the generalizability of the model. We also check to see if the model works well across neighboorhoods and also check to see if performance is consistent regardless of income levels and racial dynamics. 
+Additionally, we assess the generalizability of the model, to see if the model works well across neighboorhoods. Also, this assessment shows us if performance is consistent regardless of income levels and racial dynamics. 
 
 
 # Training and Test Sets
 
 ## Table of Model Results
 
-The table below presents the results of our linear regression model. The coefficient for each independent variable is presented - the coefficient represents the change in sales prices when the corresponding independent variable changes by one, while holding all other variables constant. As an example, if our coefficient for total livable area was 180 it means that our model estimates that sales prices increases by one dollar when the square footage of a property increase by 180 square feet when all other independent variables are held constant.
+The table below presents the results of our linear regression model. The coefficient for each independent variable is presented - the coefficient represents the change in sales prices when the corresponding independent variable changes by one, while holding all other variables constant. As an example, if our coefficient for total livable area was "180" it means that our model estimates that sales prices increases by one dollar when the square footage of a property increases by 180 square feet, all other independent variables held constant.
 
-We also present the R2 squared for our model. R2 is the statistical measure which provides information on the proportion of the variance in sales price explained by our independent variables. The R2 squared for our model is near 0.65, indicating 65% of the variance in price is explained by our model.
+We also present the R squared for our model. R squared is amount of variability the model has from the independent variable, sale price. What this means The R squared for our model is near 0.65, indicating 65% of the variance in price is explained by our model. 
 
 
 ```{r Training and Test Set}
@@ -766,11 +766,11 @@ st_join(Philly.test, acsTractsPHL.2021) %>%
 
 Our model accuracy is mixed. We have high accuracy in some cases and very poor accuracy in other instances. Our model does a poor job predicting home sales values for homes with very high sales prices - it tends to under predict the price of these homes. This could be in part due to the small sample size for homes with very high price values. Having additional training data for homes with very high sales prices could improve the accuracy of the model. 
 
-Our model also does a poor job predicting prices for low income home sales, even sometimes predicting negative home sales price values for low income houses. This error is leading to our models poor in majority black neighborhoods. The poor performance in different race and income context indicates that our model is not generalizable and additional work is needed to develop a model which is generalizing across different income and race contexts.
+Our model also does a poor job predicting prices for low income home sales, even sometimes predicting negative home sales price values for low income houses. This error is leading to our models poor predictions in majority black neighborhoods. The poor performance in different race and income context indicates that our model is not generalizable and additional work is needed to develop a model which is generalizing across different income and race contexts.
 
-Additionally, the model is not generalizable to areas outside of Philadelphia. The independent variables selected for the model, were selecting because they correlated with sales prices in the Philadelphia region. It is likely that the relationship between the selected independent variables and sales prices would be different in another geography. Additionally, the model is not generalizable because many of the datasets used in the model came from Open Data Philly, and might not be available in other geographies. 
+Additionally, the model is not generalizable to areas outside of Philadelphia. The independent variables selected for the model were selected because they catered to the Philadelphia region. It is likely that the relationship between the selected independent variables and sales prices would be different in another geography, and greater context for said areas is necessary for accuracy. 
 
 
 # Conclusion 
 
-Overall we do not recommend the model because of the racial bias it includes which can create disadvantages to marginalized communities. While the model does perform well in some areas, it is crucial to consider the ethical implications of its use. Because of the racial profiling, it is assigning risk to people, and focuses heavily on the homeowner's characteristics rather than the home itself. This process directly leads to discrimination, especially because the model is learning socioeconomic results based on historical discriminatory policy. If your sole priority is to learn what the next sale price is, this model can help accomplish this task. However, the model user should note that some of the model errors could be very large especially for expensive homes and in majority black areas. If one does not want to perpetuate existing inequalities and ethically focus on a righteous model which has similar performance regardless of race and income we must seek alternative solutions. 
+Overall we do not recommend the model because of the racial bias it includes which can create disadvantages to marginalized communities. While the model does perform well in some areas, it is crucial to consider the ethical implications of its use. Because of the racial profiling, it is assigning risk to people, and focuses heavily on the homeowner's characteristics rather than the home itself. This process directly leads to discrimination, especially because the model is learning socioeconomic results based on historical discriminatory policy. If your sole priority is to learn what the next sale price is, this model can accomplish this task. However, the model user should note that some of the model errors could be substantial especially for expensive homes and majority non-white areas. If one does not want to perpetuate existing inequalities and ethically focus on a righteous model which has similar performance regardless of race and income, we must seek alternative solutions. 
