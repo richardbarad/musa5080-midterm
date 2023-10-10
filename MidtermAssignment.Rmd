@@ -41,6 +41,7 @@ library(scales)
 library(ggiraph)
 library(plotly)
 library(stargazer)
+
 palette5 <- c("#ffffcc","#a1dab4","#41b6c4","#2c7fb8","#253494")
 options(scipen=999)
 
@@ -447,7 +448,7 @@ ggplotly(
 
 # Methods
 
-Our regression analysis will use an Ordinary Least Squares multi-variate linear regression model. As in it uses multiple independent variables to predict a single dependent variable. In our analysis the dependent variable is sales price. The independent variables which are used to predict sales price are selected based on a review of the summary statistics, correlation matrix, scatter plots, and maps in the data exploration of the report. 
+Our regression analysis will use an Ordinary Least Squares multi-variate linear regression model. As in it uses multiple independent variables to predict a single dependent variable. A linear relationship between the dependant and independant variables is assumed. In our analysis the dependent variable is sales price. The independent variables which are used to predict sales price are selected based on a review of the summary statistics, correlation matrix, scatter plots, and maps in the data exploration section of the report. 
 
 The following 13 variables were selected for inclusion in our model:
 
@@ -552,7 +553,7 @@ ggplot(reg.cv$resample, aes(x=MAE)) +
 
 The graph below depicts the difference between our predictive model and "perfect predictions", defined as 100% accuracy. For the vast majority of clusters our model is quite accurate and coincides with the line of perfection. However, as there are fewer and higher priced houses, such as the ones over 2 million, the model becomes skewed to underestimate their value. The other limitations to the model include the negative results, there are multiple points that are below the (0,0) mark which indicate the model assumed a negative value on a home regardless of the fact the actual sales price was a positive integer. Regardless, the model happens to slightly overestimate these home values, as seen by the model prediction line (green) over the line of perfection. One could use such data as an indicator of a "fixer-upper", houses that require large amount of maintenance or abysmal conditions that it would cost more to repair it than to purchase. 
 
-```{r, results = "hide", message=FALSE}
+```{r plot_prediction, message=FALSE}
 
 Philly.test %>%
   dplyr::select(sale_price.Predict, sale_price) %>%
@@ -569,6 +570,25 @@ Philly.test %>%
   plotTheme()
 ```
 
+# Fix Zero Values
+
+In order to remove negative predicted home sales values discussed above we set all the predicted home sales prices to 10,100 USD which is the lowest sale price value in Philadelphia. 10,100 acts as a lower bound and incorporates a rule that predication can never be below this bound. This correction ensures that all homes have a positive predicted price. We recommend incoprating this assumption into the model whenever the model is used to predict prices. Incoprating this change reduces our MAPE and APE when compared to the MAPE and APE prested in the previously.
+
+```{r fix_zero_values, message=FALSE}
+Philly.test <- Philly.test %>%
+      mutate(sale_price.Predict = ifelse(sale_price.Predict <= 0, 10100, sale_price.Predict),
+         sale_price.Error = sale_price.Predict - sale_price,
+         sale_price.AbsError = abs(sale_price.Predict - sale_price),
+         sale_price.APE = (abs(sale_price.Predict - sale_price)) / sale_price.Predict)
+
+Philly.test %>% 
+  st_drop_geometry() %>%
+  summarise(MAE = mean(sale_price.AbsError),
+            MAPE = mean((sale_price.APE)*100)) %>%
+  kbl(col.name=c('Mean Absolute Error','Mean Absolute Percentage Error')) %>%
+  kable_classic()
+```
+
 
 # Spatial Pattern of Errors
 
@@ -576,7 +596,7 @@ Philly.test %>%
 
 The map below shows the absolute margin of error in each prediction for the sales price. The majority of errors were off by no more than +-$50,000. There are notable patches that have greater errors, especially in the northeast and Northwest where wealthier homes are, emphasizing the evident underestimate of high value homes.
 
-```{r Resdiuals Map of Test Set, results="hide", message=FALSE}
+```{r Resdiuals Map of Test Set, message=FALSE}
 
 Philly.test <- Philly.test %>% 
   mutate(spErrorClass = cut(sale_price.Error, breaks = c(min(Philly.test$sale_price.Error, na.rm=TRUE)-1, -100000, -50000, 50000, 100000, max(Philly.test$sale_price.Error, na.rm=TRUE))))
@@ -651,18 +671,22 @@ Comparing the maps to each other, the challenge houses reflects the modelling se
 ```{r sales_price_map}
 
 HDFinal_alldata <- HDFinal_alldata %>% 
-  mutate(sale_price.Predict = predict(reg.training, HDFinal_alldata))
+  mutate(sale_price.Predict = predict(reg.training, HDFinal_alldata),
+         sale_price.Predict = ifelse(sale_price.Predict <= 0, 10100, sale_price.Predict))
 
-  
+breaks <- qBr(HDFinal_alldata,"sale_price.Predict")
+breaks1 <- as.character(as.numeric(breaks) -1)
+breaks2 = c(breaks1[2],breaks1[3],breaks1[4],breaks[5],round(max(HDFinal_alldata$sale_price.Predict),2))
+breaks3 <- paste0(breaks,' - ', breaks2)
+
  ggplot()+
    geom_sf(data=planning_districts,fill='grey80',color='transparent')+
-   geom_sf(data=HDFinal_alldata, size = 1, aes(color= q5(sale_price.Predict)))+
+   geom_sf(data=HDFinal_alldata, size = 0.5, aes(color= q5(sale_price.Predict)))+
    facet_wrap(~toPredict)+
-   scale_color_viridis_d(labels=qBr(HDFinal_alldata,"sale_price.Predict"),
-                   name="Quintile\nBreaks") +
+   scale_color_manual(values=palette5,
+                      labels=breaks3,
+                      name="Projected Home Sales Price (USD)\nQuintile Breaks") +
  mapTheme()
-
-
 ```
 
 # Spatial Pattern of Errors by Neighborhood
@@ -762,7 +786,7 @@ st_join(Philly.test, acsTractsPHL.2021) %>%
 ```
 
 
-# Accuracy  & Generalizability (look at it)
+# Accuracy and Generalizability
 
 Our model accuracy is mixed. We have high accuracy in some cases and very poor accuracy in other instances. Our model does a poor job predicting home sales values for homes with very high sales prices - it tends to under predict the price of these homes. This could be in part due to the small sample size for homes with very high price values. Having additional training data for homes with very high sales prices could improve the accuracy of the model. 
 
