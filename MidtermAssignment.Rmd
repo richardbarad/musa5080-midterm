@@ -80,7 +80,9 @@ house_data <- house_data %>%
     number_of_bathrooms = ifelse(is.na(number_of_bathrooms),1,number_of_bathrooms),
     #Assumed averager condition is value is NA
     interior_condition = ifelse(is.na(interior_condition),4,interior_condition),
-    interior_condition = ifelse(interior_condition==0,4,interior_condition))
+    interior_condition = ifelse(interior_condition==0,4,interior_condition),
+    #Assuumes total livable area is the mean where it is equal to 0
+    total_livable_area = ifelse(total_livable_area==0,mean(total_livable_area),total_livable_area))
 ```
 
 
@@ -491,15 +493,12 @@ Philly.test <- HDFinal[-inTrain,]
  
 reg.training <- 
   lm(sale_price ~ ., data = as.data.frame(Philly.training) %>% 
-                             dplyr::select(sale_price, shooting_halfmile, interior_condition, total_livable_area, 
-                                           DIST_NAME, mean_profadv,
-                                           tree_count, medHHInc, 
-                                           exterior_condition, fireplaces, WhiteHOrate, AssistedIncRate,
-                                           rest_per_sqmi, number_of_bathrooms))
-
+                        dplyr::select(sale_price, shooting_halfmile, interior_condition, total_livable_area, 
+                        DIST_NAME, mean_profadv, tree_count, medHHInc, 
+                        exterior_condition, fireplaces, WhiteHOrate, AssistedIncRate,
+                        rest_per_sqmi, number_of_bathrooms))
 
 stargazer(reg.training,type='text', title='Sales Price Model Results', keep.stat = c('n','rsq'))
-
 ```
 
 # Table of Goodness of Fit
