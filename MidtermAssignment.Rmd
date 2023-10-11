@@ -50,7 +50,7 @@ source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-L
 
 # Load House Sales Data from Github
 
-We start by importing the home sales data already provided to us for our study. This dataset includes key information on internal home characteristics, such as number of bathrooms, number of stories, total livable area, exterior home condition, and interior home condition. The provided dataset includes 23,881 data points of which 23,779 have sales price data that can be used to develop the home sales prediction model. We carefully reviewed the data to identify which internal home characteristics can be used in home sales price model. Some home attributes like the presence of central air are incomplete and contain a significant number of blank/no data values which prevent us from using them in our model. While that was not the only attribute that had incomplete data, we found 102 homes in the dataset to have insufficient data that could not be estimated, and therefore had to be excluded from the model. 
+We start by importing the home sales data already provided to us for our study. This dataset includes key information on internal home characteristics, such as number of bathrooms, number of stories, total livable area, exterior home condition, and interior home condition. The provided dataset includes 23,881 data points of which 23,779 have sales price data that can be used to develop the home sales prediction model. We carefully reviewed the data to identify which internal home characteristics can be used in home sales price model. Some home attributes like the presence of central air are incomplete and contain a significant number of blank/no data values which prevent us from using them in our model. While that was not the only attribute that had incomplete data, there are 102 homes labelled as "challenge" data which are filtered from the training model. These were used as predictions later on.  
 
 Some variables required cleaning and usage of deductive reasoning to ensure data completeness. The logic which we use to replace unknown values are outlined below:
 
@@ -513,7 +513,7 @@ Philly.test <-
     sale_price.Predict = predict(reg.training, Philly.test),
          sale_price.Error = sale_price.Predict - sale_price,
          sale_price.AbsError = abs(sale_price.Predict - sale_price),
-         sale_price.APE = (abs(sale_price.Predict - sale_price)) / sale_price.Predict)
+         sale_price.APE = (abs(sale_price.Predict - sale_price)) / sale_price)
 
 Philly.test %>% 
   st_drop_geometry() %>%
