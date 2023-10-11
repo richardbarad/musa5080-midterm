@@ -1,5 +1,5 @@
 ---
-title: "Midterm_Kapuvari"
+title: "Zillow Homesale Prediction Model, Philadelphia"
 author: "Richard Barad and Trevor Kapuvari"
 date: "2023-09-25"
 output: 
@@ -7,7 +7,7 @@ output:
     toc: true
     toc_float: true
     code_folding: hide
-    number_sections: yes
+    number_sections: yes    
 editor_options: 
   markdown: 
     wrap: 72
@@ -579,7 +579,7 @@ Philly.test <- Philly.test %>%
       mutate(sale_price.Predict = ifelse(sale_price.Predict <= 0, 10100, sale_price.Predict),
          sale_price.Error = sale_price.Predict - sale_price,
          sale_price.AbsError = abs(sale_price.Predict - sale_price),
-         sale_price.APE = (abs(sale_price.Predict - sale_price)) / sale_price.Predict)
+         sale_price.APE = (abs(sale_price.Predict - sale_price)) / sale_price)
 
 Philly.test %>% 
   st_drop_geometry() %>%
@@ -756,13 +756,13 @@ grid.arrange(ncol = 2,
   ggplot() + 
     geom_sf(data=planning_districts,fill='beige',color='transparent')+
     geom_sf(data = acsTractsPHL.2021, aes(fill = raceContext)) +
-    scale_fill_manual(values=c('orange','green'))+
+    scale_fill_manual(values=c('black','white'))+
     labs(title = "Race Context") +
     mapTheme() + theme(legend.position="bottom"), 
   ggplot() + 
     geom_sf(data=planning_districts,fill='beige',color='transparent')+
     geom_sf(data = acsTractsPHL.2021, aes(fill = incomeContext))+
-    scale_fill_manual(values=c('green','orange'))+
+    scale_fill_manual(values=c('green','black'))+
     labs(title = "Income Context") +
     mapTheme() + theme(legend.position="bottom"))
 
